@@ -9,7 +9,7 @@ To deliver this map to officals, Clearwell will be powered by two models. The fi
 xylem-clearwell/
 ├── README.md
 ├── requirements.txt
-├── .gitignore        # data/, *.pt, __pycache__/, .env
+├── .gitignore        # data/, other standard shit
 ├── config.py         # paths, region, dates, normalization numbers
 ├── train.py          # Phases 1-3
 ├── export_s1.py      # Phase 4
