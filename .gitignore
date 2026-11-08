@@ -1,1 +1,5 @@
 .venv/
+data/
+*.pt
+__pycache__/
+.env
