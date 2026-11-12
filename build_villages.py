@@ -155,15 +155,22 @@ def grid_units(districts_utm, cell_m, populated_xy=None):
 # ---------------------------------------------------------------------------
 # Population (WorldPop)
 # ---------------------------------------------------------------------------
-def get_worldpop(paths, logger):
-    """Path to a WorldPop 2020 100 m GeoTIFF for India, or None. Source string too."""
-    manual = paths.manual / "worldpop.tif"
-    if manual.exists():
-        return manual, "data/manual/worldpop.tif (supplied by hand)"
-    folder = paths.cache / "worldpop"
-    existing = sorted(folder.glob("*.tif")) if folder.exists() else []
-    if existing:
-        return existing[0], f"cached {existing[0].name}"
+def clip_raster_to_bbox(src_path, bbox_lonlat, out_path):
+    """Copy the part of a (local or /vsicurl/ remote) raster inside bbox to a small GeoTIFF."""
+    import rasterio
+    from rasterio.windows import Window, from_bounds
+    with rasterio.open(src_path) as src:
+        win = from_bounds(*bbox_lonlat, transform=src.transform).round_offsets().round_lengths()
+        win = win.intersection(Window(0, 0, src.width, src.height))
+        data = src.read(1, window=win)
+        transform, crs, nodata = src.window_transform(win), src.crs, src.nodata
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    common.write_tif(out_path, data, crs, transform, nodata=nodata)
+    return out_path
+
+
+def worldpop_urls(logger):
+    """Candidate WorldPop 2020 India GeoTIFF URLs: REST API answers first, then fallbacks."""
     urls = []
     session = common.http_session()
     for alias in config.WORLDPOP_ALIASES:
@@ -177,12 +184,40 @@ def get_worldpop(paths, logger):
             logger.info(f"WorldPop API '{alias}': {len(entries)} entries")
         except Exception as err:  # noqa: BLE001
             logger.warning(f"WorldPop API '{alias}' failed: {err}")
-    urls += config.WORLDPOP_DIRECT_URLS
+    return urls + [u for u in config.WORLDPOP_DIRECT_URLS if u not in urls]
+
+
+def get_worldpop(paths, aoi, logger):
+    """Path to a WorldPop 2020 100 m GeoTIFF covering the AOI, or None. Source string too.
+
+    Order: data/manual/worldpop.tif, a cached clip for this AOI, a remote windowed
+    read of only the AOI (/vsicurl/, a few MB), and last a full download of the
+    India file (large) that is then clipped.
+    """
+    manual = paths.manual / "worldpop.tif"
+    if manual.exists():
+        return manual, "data/manual/worldpop.tif (supplied by hand)"
+    clip = paths.cache / "worldpop" / f"worldpop_aoi_{bbox_key(aoi['bbox_lonlat'])}.tif"
+    source_note = clip.with_suffix(".source.txt")
+    if clip.exists():
+        return clip, source_note.read_text() if source_note.exists() else "cached clip"
+    urls = worldpop_urls(logger)
     for url in urls:
         try:
-            dest = folder / url.split("/")[-1]
-            common.download_file(url, dest, logger, timeout=120)
-            return dest, url
+            common.retry(clip_raster_to_bbox, "/vsicurl/" + url, aoi["bbox_lonlat"], clip,
+                         what=f"WorldPop window read {url}", logger=logger)
+            source_note.write_text(url)
+            logger.info(f"WorldPop: read the AOI window from {url}")
+            return clip, url
+        except Exception as err:  # noqa: BLE001
+            logger.warning(f"WorldPop window read {url} failed: {err}")
+    for url in urls:
+        try:
+            full = paths.cache / "worldpop" / url.split("/")[-1]
+            common.download_file(url, full, logger, timeout=120)
+            clip_raster_to_bbox(full, aoi["bbox_lonlat"], clip)
+            source_note.write_text(url)
+            return clip, url
         except Exception as err:  # noqa: BLE001
             logger.warning(f"WorldPop download {url} failed: {err}")
     return None, None
@@ -456,7 +491,7 @@ def run_villages(smoke=False, logger=None, **kwargs):
 
     # 1) population first (also used to find populated areas for the grid fallback)
     pop_xy = None
-    wp_path, wp_source = get_worldpop(paths, logger)
+    wp_path, wp_source = get_worldpop(paths, aoi, logger)
     if wp_path is not None:
         try:
             px_x, px_y, pop_vals = population_points(wp_path, aoi)

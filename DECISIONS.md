@@ -44,6 +44,7 @@ One line per decision that the original spec left open.
 - `first_flood_date` is the first pass in which at least 1% of the unit is flooded.
 - `elev_pctile` is the percentile of the unit's mean elevation within its district.
 - WorldPop file URL is asked from the WorldPop REST API at run time (aliases tried in order); hard-coded URLs are only fallbacks; a hand-downloaded file in `data/manual/` wins.
+- WorldPop is read remotely for the AOI window only (GDAL /vsicurl/) and the small clip is cached; the full India file is downloaded only if windowed reads fail.
 - No Census 2011 drinking-water table could be fetched reliably (censusindia.gov.in and data.gov.in were unreachable here and need manual steps), so the code reads a hand-filled `data/manual/census_water.csv` or excludes the feature.
 - Percentile ranks give tied values the lowest rank, scaled (rank - 1) / (n - 1), so all zero-flood units get 0 instead of a middle value.
 - If one unit lacks one value (for example no DEM), its weights are renormalized over the values it has.

@@ -115,7 +115,7 @@ def pipeline(tmp_paths, logger, monkeypatch):
               for i, (lo, la) in enumerate(zip(lons, lats))]
     monkeypatch.setattr(build_villages, "fetch_osm_places", lambda *a, **k: places)
     wp = _fake_worldpop(tmp_paths)
-    monkeypatch.setattr(build_villages, "get_worldpop", lambda paths, logger: (wp, "synthetic"))
+    monkeypatch.setattr(build_villages, "get_worldpop", lambda paths, aoi_, logger: (wp, "synthetic"))
     bx, by = rng.uniform(X0, X0 + W * PX, 500), rng.uniform(Y0 - H * PX, Y0, 500)
     blon, blat = to_ll.transform(bx, by)
     bld = pd.DataFrame({"longitude": blon, "latitude": blat, "confidence": 0.9})

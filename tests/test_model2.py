@@ -162,3 +162,19 @@ def test_idsp_loader_dedups_matches_and_zero_fills(tmp_path, logger):
                                               events["date"].max())
     assert (table[table["district"] == "Jorhat"]["outbreaks"] == 0).all()
     assert table["outbreaks"].sum() == (events["district"] == "Dhemaji").sum()
+
+
+def test_clip_raster_to_bbox(tmp_path):
+    import rasterio
+    from rasterio.transform import from_origin
+    src = tmp_path / "pop.tif"
+    data = np.arange(100 * 100, dtype=np.float32).reshape(100, 100)
+    with rasterio.open(src, "w", driver="GTiff", width=100, height=100, count=1, dtype="float32",
+                       crs="EPSG:4326", transform=from_origin(90.0, 30.0, 0.01, 0.01)) as dst:
+        dst.write(data, 1)
+    out = build_villages.clip_raster_to_bbox(src, (90.2, 29.5, 90.4, 29.8), tmp_path / "clip.tif")
+    with rasterio.open(out) as c:
+        clip = c.read(1)
+        assert clip.shape == (30, 20)
+        assert c.transform.c == pytest.approx(90.2) and c.transform.f == pytest.approx(29.8)
+    assert clip[0, 0] == data[20, 20]
