@@ -1,5 +1,20 @@
-.venv/
+# Large or machine-specific files: never commit these.
 data/
+outputs/
 *.pt
+*.pth
+*.tif
+*.tiff
+*.gpkg
+*.zip
+*.part
 __pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
 .env
+.venv/
+venv/
+
+# Smoke-run results are a code check only; keep them out of git.
+results/smoke/
