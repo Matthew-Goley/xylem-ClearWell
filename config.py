@@ -197,8 +197,9 @@ GEOBOUNDARIES_DIRECT = ("https://media.githubusercontent.com/media/wmgeolab/geoB
 # Majuli. This is only an area to download, not an official boundary.
 AOI_BBOX_FALLBACK = (93.6, 26.7, 95.6, 27.9)
 
-# Smoke mode: a tiny box (about 5 km x 5 km) on the Brahmaputra near Majuli.
-SMOKE_BBOX = (94.20, 26.90, 94.25, 26.945)
+# Smoke mode: a tiny box (about 5 km x 5 km) centred in Majuli, chosen so that
+# roughly a third of it is permanent river water in JRC Global Surface Water.
+SMOKE_BBOX = (94.325, 26.95, 94.375, 26.995)
 SMOKE_FLOOD_DATES = 2
 SMOKE_NORMAL_DATES = 2
 

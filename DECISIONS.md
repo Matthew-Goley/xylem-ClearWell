@@ -61,3 +61,4 @@ One line per decision that the original spec left open.
 - Verification here used Python 3.12 in `.venv`.
 - Planetary Computer, GADM, OSM Overpass, WorldPop, ImageNet weights and the Indian government sites were blocked by this environment's network policy; Google Cloud Storage, AWS Copernicus DEM and geoBoundaries (via media.githubusercontent.com) worked.
 - Because the full Sen1Floods11 data could be downloaded here, the full `get_sen1floods11`, `train` and `test` stages were also run on the CPU here with a randomly initialised encoder (ImageNet weights blocked). Those results are real but are a CPU baseline; the GPU run at home overwrites them.
+- Smoke box: a 5 km box with its centre in Majuli, picked from JRC GSW so that about a third is permanent water (so the smoke quick-look shows a river).
