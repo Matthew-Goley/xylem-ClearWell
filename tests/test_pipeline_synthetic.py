@@ -89,9 +89,10 @@ def _fake_worldpop(paths):
 
 @pytest.fixture
 def pipeline(tmp_paths, logger, monkeypatch):
+    from pyproj import Transformer
+
     import build_villages
     import train
-    from pyproj import Transformer
     aoi = _make_inputs(tmp_paths)
     ckpt = {"norm_stats": STATS, "saved_at": "synthetic", "smoke": False, "epoch": 0, "val_iou": 0.0,
             "encoder_weights": None}
@@ -133,12 +134,13 @@ def pipeline(tmp_paths, logger, monkeypatch):
 
 def test_full_synthetic_pipeline(pipeline, monkeypatch):
     import rasterio
+    from synthetic_idsp import make_fake_idsp_csv
+
     import build_villages
     import flood_map
     import risk_score
     import summary
     import validate_risk
-    from synthetic_idsp import make_fake_idsp_csv
 
     paths, aoi, logger = pipeline
     monkeypatch.setattr(config, "INFER_TILE", 256)

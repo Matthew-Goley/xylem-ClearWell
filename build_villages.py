@@ -108,7 +108,7 @@ def voronoi_units(points, districts_utm, max_radius):
     joined = gpd.sjoin(pts, cells, predicate="within", how="left")
     district_geom = dict(zip(districts_utm["district"], districts_utm.geometry))
     rows = []
-    for i, row in joined.iterrows():
+    for _, row in joined.iterrows():
         if pd.isna(row["index_right"]):
             continue
         cell = cells.geometry.iloc[int(row["index_right"])]
@@ -353,8 +353,9 @@ def flood_features(paths, aoi, unit_idx, n_units, pop_pixels=None, bld_pixels=No
     pop_pixels / bld_pixels: optional (row, col, weight, unit) arrays for
     WorldPop centres and buildings, used for exposed people per pass.
     """
-    from flood_map import iterate_flood_passes
     import rasterio
+
+    from flood_map import iterate_flood_passes
     feats = {}
     px_per_unit = count_per_unit(unit_idx, unit_idx > 0, n_units)
     feats["n_pixels"] = px_per_unit

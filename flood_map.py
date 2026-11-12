@@ -58,6 +58,7 @@ def predict_array(model, x, device, use_amp, tile=None, overlap=None, batch=None
     where pieces overlap, their probabilities are averaged.
     """
     import torch
+
     from train import predict_logits
     tile = tile or config.INFER_TILE
     overlap = config.INFER_OVERLAP if overlap is None else overlap
@@ -94,6 +95,7 @@ def predict_raster(model, src_path, dst_path, stats, device, use_amp, logger=Non
     """
     import rasterio
     from rasterio.windows import Window
+
     from train import preprocess_radar
     with rasterio.open(src_path) as src:
         height, width = src.height, src.width
@@ -384,6 +386,7 @@ def read_u8(path):
 def run_flood_map(smoke=False, logger=None, **kwargs):
     import rasterio
     import torch
+
     from train import load_trained_model
 
     paths = config.get_paths(smoke)
@@ -444,8 +447,8 @@ def run_flood_map(smoke=False, logger=None, **kwargs):
                          nodata=NODATA_U8, dtype="uint8")
 
     tracker = None
-    for _, _, tracker in iterate_flood_passes(paths, aoi):
-        pass
+    for day, _flood, tracker in iterate_flood_passes(paths, aoi):
+        logger.info(f"Duration and extent updated with pass {day}")
     extent, duration = tracker.extent_u8(), tracker.duration_u16()
     common.write_tif(paths.outputs / "flood_extent.tif", extent, crs, transform,
                      nodata=NODATA_U8, dtype="uint8")
@@ -530,10 +533,12 @@ def optical_check(paths, aoi, logger):
         d = date.fromisoformat(day)
         window = f"{(d - timedelta(days=config.S2_MAX_DAYS)).isoformat()}/" \
                  f"{(d + timedelta(days=config.S2_MAX_DAYS)).isoformat()}"
-        items = common.retry(lambda: list(catalog.search(
-            collections=[config.S2_COLLECTION], bbox=aoi["bbox_lonlat"], datetime=window,
-            query={"eo:cloud_cover": {"lt": config.S2_MAX_CLOUD}}).items()),
-            what="Sentinel-2 search", logger=logger)
+
+        def _search(window=window):
+            return list(catalog.search(
+                collections=[config.S2_COLLECTION], bbox=aoi["bbox_lonlat"], datetime=window,
+                query={"eo:cloud_cover": {"lt": config.S2_MAX_CLOUD}}).items())
+        items = common.retry(_search, what="Sentinel-2 search", logger=logger)
         for it in items:
             gap = abs((it.datetime.date() - d).days)
             candidates.append((gap, it.properties.get("eo:cloud_cover", 100), day, it))
@@ -698,7 +703,7 @@ def run_sanity_check(smoke=False, logger=None, **kwargs):
         try:
             report[name] = func(paths, aoi, logger)
         except Exception as err:  # noqa: BLE001
-            short, tb = common.format_exception(err)
+            short = common.format_exception(err)[0]
             logger.warning(f"{name} check failed: {short}")
             report[name] = {"status": "FAILED", "reason": short}
         logger.info(f"{name}: {report[name].get('status')} {report[name].get('reason', '')}")
@@ -719,8 +724,8 @@ def run_sanity_check(smoke=False, logger=None, **kwargs):
     s2 = report["sentinel2_optical"]
     lines += ["## 1. Independent optical check (Sentinel-2 MNDWI)", "", f"Status: **{s2['status']}**"]
     if s2["status"] == "DONE":
-        lines += [f"- flood pass {s2['flood_pass']} vs Sentinel-2 {s2['s2_date']} "
-                  f"({s2['days_apart']} days apart), clear fraction {s2['clear_fraction']:.3f}",
+        lines += [(f"- flood pass {s2['flood_pass']} vs Sentinel-2 {s2['s2_date']} "
+                  f"({s2['days_apart']} days apart), clear fraction {s2['clear_fraction']:.3f}"),
                   f"- model water vs MNDWI water: {fmt(s2['metrics_model_vs_s2'])}", f"- {s2['note']}"]
     else:
         lines.append(f"- reason: {s2.get('reason')}")
@@ -737,8 +742,8 @@ def run_sanity_check(smoke=False, logger=None, **kwargs):
                  "and check that red flood areas sit next to rivers and low ground."
                  if v["status"] == "DONE" else f"- reason: {v.get('reason')}")
     lines += ["", "## Not done", "",
-              "- No comparison with official government flood maps (cannot be automated). "
-              "Nothing here claims agreement with them."]
+              ("- No comparison with official government flood maps (cannot be automated). "
+              "Nothing here claims agreement with them.")]
     (paths.results / "sanity_check.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     if report["visual_figure"]["status"] != "DONE":
         return common.result("FAILED", "visual figure could not be produced")

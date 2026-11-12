@@ -773,8 +773,8 @@ def run_test(smoke=False, logger=None, **kwargs):
 
     def fmt(v):
         return "n/a" if v is None or (isinstance(v, float) and np.isnan(v)) else f"{v:.3f}"
-    lines = ["| Group | n tiles | U-Net IoU | Otsu IoU | U-Net precision | U-Net recall | "
-             "Otsu precision | Otsu recall |", "|---|---|---|---|---|---|---|---|"]
+    lines = [("| Group | n tiles | U-Net IoU | Otsu IoU | U-Net precision | U-Net recall | "
+             "Otsu precision | Otsu recall |"), "|---|---|---|---|---|---|---|---|"]
     names = {"test_all": "Test (all)", "test_india": "Test (India only)",
              "bolivia": "Bolivia holdout"}
     for g, m in metrics.items():

@@ -437,7 +437,7 @@ def run_export(smoke=False, logger=None, extra_normal=False, **kwargs):
         flood_items = search_s1(catalog, collection, search_geom, *windows["flood"], logger)
         warnings.append("used GRD fallback with approximate calibration (see README)")
     normal_items = []
-    for year, (s, e) in windows["normal"].items():
+    for s, e in windows["normal"].values():
         normal_items += search_s1(catalog, collection, search_geom, s, e, logger)
 
     coverage, groups_items = coverage_by_orbit_and_date(flood_items + normal_items, regions_utm, to_utm)
