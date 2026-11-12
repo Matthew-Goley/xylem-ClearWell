@@ -3,7 +3,7 @@ export_s1.py - MODEL 1 phase 4: Sentinel-1 radar for Assam from Microsoft
 Planetary Computer (no account and no Earth Engine needed).
 
 What it does:
-  1. Gets district boundaries (GADM 4.1, then geoBoundaries, then a bbox).
+  1. Gets district boundaries (geoBoundaries, then GADM 4.1, then a bbox).
   2. Searches sentinel-1-rtc (IW mode, VV+VH) for the flood window and the
      same calendar dates in normal years.
   3. Picks ONE orbit direction + relative orbit and (if DISTRICTS = "auto")

@@ -6,7 +6,7 @@ Contents:
   * stage bookkeeping: markers in outputs/markers/, results/status.json, results/STATUS.md
   * network helpers: retry(), download_file()
   * raster helpers: write_tif(), grid info from outputs/aoi.json
-  * district boundaries for Assam (GADM 4.1, then geoBoundaries)
+  * district boundaries for Assam (geoBoundaries, then GADM 4.1)
   * district name matching (aliases + rapidfuzz)
   * Copernicus DEM on the flood-map grid
 """
@@ -461,7 +461,9 @@ def get_districts(paths, logger, state=None):
     if cache.exists():
         source = source_file.read_text().strip() if source_file.exists() else "cache"
         return gpd.read_file(cache), source
-    for source, func in [("GADM 4.1", _gadm_districts), ("geoBoundaries", _geoboundaries_districts)]:
+    # geoBoundaries first: it has current district names (for example Majuli, created
+    # in 2016). GADM 4.1 is the fallback.
+    for source, func in [("geoBoundaries", _geoboundaries_districts), ("GADM 4.1", _gadm_districts)]:
         try:
             gdf = func(paths, logger, state)
             gdf = gdf.to_crs("EPSG:4326")
