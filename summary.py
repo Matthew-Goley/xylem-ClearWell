@@ -45,8 +45,9 @@ def git_info(root):
         except Exception:  # noqa: BLE001
             return ""
     commit = _git("rev-parse", "--short", "HEAD") or "unknown"
-    dirty = bool(_git("status", "--porcelain", "--untracked-files=no"))
-    return commit + (" (with uncommitted changes)" if dirty else "")
+    # Only code changes count as "uncommitted"; result files change on every run.
+    dirty = bool(_git("status", "--porcelain", "--untracked-files=no", "--", ".", ":!results"))
+    return commit + (" (with uncommitted code changes)" if dirty else "")
 
 
 def missing(stage):
