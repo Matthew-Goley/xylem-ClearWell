@@ -12,8 +12,85 @@
       "status": "OK",
       "reason": "",
       "warnings": [],
-      "runtime_s": 1.6,
-      "finished_at": "2026-11-12T07:39:12",
+      "runtime_s": 0.2,
+      "finished_at": "2026-11-12T08:14:35",
+      "smoke": false
+    },
+    "train": {
+      "status": "OK",
+      "reason": "",
+      "warnings": [
+        "ImageNet encoder weights could not be downloaded; trained from random init",
+        "trained on CPU"
+      ],
+      "runtime_s": 3535.8,
+      "finished_at": "2026-11-12T08:13:28",
+      "smoke": false
+    },
+    "test": {
+      "status": "OK",
+      "reason": "",
+      "warnings": [],
+      "runtime_s": 28.7,
+      "finished_at": "2026-11-12T08:13:57",
+      "smoke": false
+    },
+    "check_env": {
+      "status": "OK",
+      "reason": "",
+      "warnings": [
+        "no CUDA GPU on this machine (CPU only)"
+      ],
+      "runtime_s": 1.3,
+      "finished_at": "2026-11-12T08:14:14",
+      "smoke": false
+    },
+    "export_s1": {
+      "status": "FAILED",
+      "reason": "APIError: HTTPSConnectionPool(host='planetarycomputer.microsoft.com', port=443): Max retries exceeded with url: /api/stac/v1 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))",
+      "warnings": [],
+      "runtime_s": 1.7,
+      "finished_at": "2026-11-12T08:14:16",
+      "smoke": false
+    },
+    "flood_map": {
+      "status": "NOT RUN",
+      "reason": "needs stage(s) export_s1 to finish first",
+      "warnings": [],
+      "runtime_s": 0.0,
+      "finished_at": "2026-11-12T08:14:16",
+      "smoke": false
+    },
+    "sanity_check": {
+      "status": "NOT RUN",
+      "reason": "needs stage(s) flood_map to finish first",
+      "warnings": [],
+      "runtime_s": 0.0,
+      "finished_at": "2026-11-12T08:14:16",
+      "smoke": false
+    },
+    "villages": {
+      "status": "NOT RUN",
+      "reason": "needs stage(s) flood_map to finish first",
+      "warnings": [],
+      "runtime_s": 0.0,
+      "finished_at": "2026-11-12T08:14:16",
+      "smoke": false
+    },
+    "risk": {
+      "status": "NOT RUN",
+      "reason": "needs stage(s) villages to finish first",
+      "warnings": [],
+      "runtime_s": 0.0,
+      "finished_at": "2026-11-12T08:14:16",
+      "smoke": false
+    },
+    "validate": {
+      "status": "NOT RUN",
+      "reason": "needs stage(s) risk to finish first",
+      "warnings": [],
+      "runtime_s": 0.0,
+      "finished_at": "2026-11-12T08:14:16",
       "smoke": false
     }
   },
