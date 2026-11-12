@@ -1,0 +1,27 @@
+{
+  "stages": {
+    "get_sen1floods11": {
+      "status": "OK",
+      "reason": "",
+      "warnings": [],
+      "runtime_s": 42.4,
+      "finished_at": "2026-11-12T07:12:02",
+      "smoke": false
+    },
+    "summary": {
+      "status": "OK",
+      "reason": "",
+      "warnings": [],
+      "runtime_s": 1.6,
+      "finished_at": "2026-11-12T07:39:12",
+      "smoke": false
+    }
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.18.44-fc-v378-x86_64-with-glibc2.39",
+    "cpu_count": 4,
+    "torch": "2.15.0+cu132",
+    "cuda_available": false
+  }
+}
