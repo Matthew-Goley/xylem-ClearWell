@@ -160,6 +160,19 @@ def test_full_synthetic_pipeline(pipeline, monkeypatch):
     ts = pd.read_csv(paths.results / "flood_timeseries.csv")
     assert set(ts["district"]) == {"DistA", "DistB"}
 
+    # Sanity checks: the two network checks are stubbed, the figure and report are real.
+    monkeypatch.setattr(flood_map, "optical_check",
+                        lambda *a: {"status": "NOT POSSIBLE", "reason": "stubbed in test"})
+
+    def offline_jrc_check(*args):
+        raise RuntimeError("offline")
+    monkeypatch.setattr(flood_map, "jrc_check", offline_jrc_check)
+    res = flood_map.run_sanity_check(smoke=False, logger=logger)
+    assert res["status"] == "OK", res
+    report = (paths.results / "sanity_check.md").read_text()
+    assert "NOT POSSIBLE" in report and "FAILED" in report and "official government" in report
+    assert (paths.results / "assam_sanity_visual.png").exists()
+
     res = build_villages.run_villages(smoke=False, logger=logger)
     assert res["status"] == "OK", res
     feats = pd.read_csv(paths.outputs / "village_features.csv")
