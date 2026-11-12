@@ -301,6 +301,28 @@ def aoi_grid(aoi):
     return g["crs"], Affine(*g["transform"][:6]), int(g["width"]), int(g["height"])
 
 
+def grid_bounds(transform, width, height):
+    """(xmin, ymin, xmax, ymax) of a north-up grid."""
+    xmin, ymax = transform.c, transform.f
+    xmax = transform.c + width * transform.a
+    ymin = transform.f + height * transform.e
+    return xmin, ymin, xmax, ymax
+
+
+def xy_to_rowcol(transform, x, y):
+    """Map coordinates -> fractional (row, col) on a north-up grid."""
+    col = (np.asarray(x, dtype=float) - transform.c) / transform.a
+    row = (np.asarray(y, dtype=float) - transform.f) / transform.e
+    return row, col
+
+
+def scaled_transform(transform, factor):
+    """Transform of the same grid with pixels `factor` times bigger (north-up)."""
+    from affine import Affine
+    return Affine(transform.a * factor, transform.b, transform.c,
+                  transform.d, transform.e * factor, transform.f)
+
+
 def pixel_area_km2(aoi):
     return (aoi["grid"]["pixel_size_m"] ** 2) / 1e6
 
@@ -471,8 +493,7 @@ def districts_for_aoi(paths, aoi):
     gpkg = paths.outputs / "aoi_districts.gpkg"
     if gpkg.exists():
         return gpd.read_file(gpkg).to_crs(crs)
-    xmin, ymax = transform * (0, 0)
-    xmax, ymin = transform * (width, height)
+    xmin, ymin, xmax, ymax = grid_bounds(transform, width, height)
     return gpd.GeoDataFrame({"district": ["AOI"]}, geometry=[box(xmin, ymin, xmax, ymax)],
                             crs=crs)
 
