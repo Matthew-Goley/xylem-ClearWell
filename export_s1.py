@@ -212,8 +212,12 @@ def _tif_profile(crs, transform, width, height):
             "blockysize": 512, "BIGTIFF": "IF_SAFER"}
 
 
-def write_rtc_date(items, crs, transform, width, height, out_path):
-    """Mosaic RTC items of one date onto the grid and write VV/VH dB in chunks."""
+def write_rtc_date(items, crs, transform, width, height, out_path, aoi_mask=None):
+    """Mosaic RTC items of one date onto the grid and write VV/VH dB in chunks.
+
+    aoi_mask (bool H x W, optional): pixels outside it are written as NaN, and
+    chunks completely outside it are not downloaded at all (saves disk and time).
+    """
     import odc.stac
     import rasterio
     from odc.geo.geobox import GeoBox
@@ -231,8 +235,14 @@ def write_rtc_date(items, crs, transform, width, height, out_path):
         for r0 in range(0, height, step):
             for c0 in range(0, width, step):
                 h, w = min(step, height - r0), min(step, width - c0)
-                sub = ds.isel(y=slice(r0, r0 + h), x=slice(c0, c0 + w)).compute()
-                block = np.stack([power_to_db(sub["vv"].values), power_to_db(sub["vh"].values)])
+                inside = None if aoi_mask is None else aoi_mask[r0:r0 + h, c0:c0 + w]
+                if inside is not None and not inside.any():
+                    block = np.full((2, h, w), np.nan, dtype=np.float32)  # skip the download
+                else:
+                    sub = ds.isel(y=slice(r0, r0 + h), x=slice(c0, c0 + w)).compute()
+                    block = np.stack([power_to_db(sub["vv"].values), power_to_db(sub["vh"].values)])
+                    if inside is not None:
+                        block[:, ~inside] = np.nan
                 dst.write(block, window=Window(c0, r0, w, h))
     os.replace(tmp, out_path)
 
@@ -260,7 +270,7 @@ def calibration_lut(xml_text, shape):
     return (per_line[i0] * (1 - t) + per_line[i1] * t).astype(np.float32)
 
 
-def write_grd_date(items, crs, transform, width, height, out_path, logger):
+def write_grd_date(items, crs, transform, width, height, out_path, logger, aoi_mask=None):
     """FALLBACK: GRD items -> approximate sigma0 dB on the grid.
 
     Applies the sigmaNought calibration LUT and warps with the scene GCPs.
@@ -293,6 +303,8 @@ def write_grd_date(items, crs, transform, width, height, out_path, logger):
                           dst_crs=crs, resampling=Resampling.bilinear, src_nodata=np.nan,
                           dst_nodata=np.nan, init_dest_nodata=False)
             del sigma0
+        if aoi_mask is not None:
+            dst[~aoi_mask] = np.nan
         bands.append(power_to_db(dst))
     common.write_tif(out_path, np.stack(bands), crs, transform, nodata=np.nan,
                      dtype="float32", band_names=["VV_dB", "VH_dB"])
@@ -332,7 +344,8 @@ def pass_stats(path):
                 vv = block[0]
                 waterish += int((np.isfinite(vv) & (vv < config.WATERISH_VV_DB)).sum())
     stats = {"count": count.tolist(), "sum": total.tolist(), "sum_sq": total_sq.tolist(),
-             "pixels": pixels, "valid_fraction": float(count[0] / pixels) if pixels else 0.0,
+             "pixels": pixels, "valid_pixels": int(count[0]),
+             "valid_fraction": float(count[0] / pixels) if pixels else 0.0,
              "waterish_fraction": float(waterish / count[0]) if count[0] else float("nan")}
     with open(cache, "w") as f:
         json.dump(stats, f)
@@ -490,6 +503,14 @@ def run_export(smoke=False, logger=None, extra_normal=False, **kwargs):
                      crs=f"EPSG:{epsg}").to_file(paths.outputs / "aoi_districts.gpkg", driver="GPKG")
 
     crs, transform, width, height = common.aoi_grid(aoi)
+    # Only pixels inside the chosen districts (plus a buffer) are kept; the rest
+    # of the bounding box is NaN, which costs almost no disk space.
+    from rasterio import features
+    buffered = union_all(list(chosen_regions.values())).buffer(config.AOI_BUFFER_M)
+    aoi_mask = features.rasterize([(buffered, 1)], out_shape=(height, width), transform=transform,
+                                  fill=0, dtype="uint8").astype(bool)
+    n_aoi_px = int(aoi_mask.sum())
+    logger.info(f"AOI covers {n_aoi_px / 1e6:.1f} Mpx of the {width * height / 1e6:.1f} Mpx grid")
     written = {"flood": [], "normal": []}
     for kind, dates in [("flood", flood_dates), ("normal", normal_dates)]:
         for day in dates:
@@ -502,9 +523,10 @@ def run_export(smoke=False, logger=None, extra_normal=False, **kwargs):
                 def _write(items=items, out_path=out_path):
                     signed = [planetary_computer.sign(i) for i in items]  # fresh tokens each try
                     if collection == config.S1_COLLECTION:
-                        write_rtc_date(signed, crs, transform, width, height, out_path)
+                        write_rtc_date(signed, crs, transform, width, height, out_path, aoi_mask)
                     else:
-                        write_grd_date(signed, crs, transform, width, height, out_path, logger)
+                        write_grd_date(signed, crs, transform, width, height, out_path, logger,
+                                       aoi_mask)
                 common.retry(_write, what=f"export {day}", logger=logger, wait_s=15)
             else:
                 logger.info(f"{out_path} exists, skipping download")
@@ -514,10 +536,11 @@ def run_export(smoke=False, logger=None, extra_normal=False, **kwargs):
                 out_path.unlink()
                 warnings.append(f"{kind} pass {day} was all NaN and was removed")
                 continue
-            logger.info(f"  {day}: valid {stats['valid_fraction']:.3f} of grid, water-ish "
+            stats["aoi_coverage"] = stats["valid_pixels"] / max(n_aoi_px, 1)
+            logger.info(f"  {day}: radar covers {stats['aoi_coverage']:.3f} of the AOI, water-ish "
                         f"(VV < {config.WATERISH_VV_DB} dB) {stats['waterish_fraction']:.3f}")
             written[kind].append({"date": day, "path": str(out_path.relative_to(paths.root)),
-                                  **{k: stats[k] for k in ("valid_fraction", "waterish_fraction")},
+                                  **{k: stats[k] for k in ("aoi_coverage", "waterish_fraction")},
                                   "_stats": stats})
 
     # Normal years must look less flooded than the flood window.

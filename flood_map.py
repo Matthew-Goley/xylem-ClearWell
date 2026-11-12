@@ -430,8 +430,11 @@ def run_flood_map(smoke=False, logger=None, **kwargs):
     normal = normal_water_mask([read_u8(p) for p in water_paths["normal"].values()])
     common.write_tif(paths.outputs / "normal_water.tif", normal, crs, transform,
                      nodata=NODATA_U8, dtype="uint8")
-    unseen = float((normal == NODATA_U8).mean())
-    logger.info(f"Normal water: {float((normal == 1).mean()):.3f} of the grid; "
+    districts_utm = common.districts_for_aoi(paths, aoi)
+    district_idx = common.rasterize_districts(districts_utm, transform, width, height)
+    in_districts = district_idx > 0
+    unseen = float((normal[in_districts] == NODATA_U8).mean()) if in_districts.any() else 1.0
+    logger.info(f"Normal water: {float((normal[in_districts] == 1).mean()):.3f} of the districts; "
                 f"{unseen:.3f} never seen in a normal pass (treated as no data)")
     if unseen > 0.05:
         warnings.append(f"{unseen:.1%} of the grid has no normal-year observation")
@@ -457,8 +460,6 @@ def run_flood_map(smoke=False, logger=None, **kwargs):
     interval = tracker.interval
     logger.info(f"Revisit interval used for duration: {interval} days")
 
-    districts_utm = common.districts_for_aoi(paths, aoi)
-    district_idx = common.rasterize_districts(districts_utm, transform, width, height)
     names = districts_utm["district"].tolist()
     district_timeseries(paths, aoi, district_idx, names, logger)
     km2 = common.pixel_area_km2(aoi)
@@ -491,7 +492,7 @@ def run_flood_map(smoke=False, logger=None, **kwargs):
                "duration_note": "duration = (last - first date of the longest run of consecutive "
                                 "flooded passes) + one revisit interval; resolution one interval",
                "min_blob_pixels": min_px, "pixels_removed_by_cleanup": removed_total,
-               "normal_water_fraction": float((normal == 1).mean()),
+               "normal_water_fraction_of_districts": float((normal[in_districts] == 1).mean()),
                "unseen_in_normal_fraction": unseen, "per_district": per_district,
                "plausibility": plaus, "threshold": config.WATER_THRESHOLD,
                "checkpoint": model_info, "generated_at": datetime.now().isoformat()}

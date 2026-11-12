@@ -100,6 +100,16 @@ def test_write_rtc_date_mosaics_two_scenes(tmp_path, monkeypatch):
     pooled = export_s1.pooled_mean_std([stats])
     assert -20.0 <= pooled["vv_mean"] <= -10.0
 
+    # With an AOI mask, pixels outside it are NaN (and fully outside chunks are skipped).
+    mask = np.zeros((height, width), bool)
+    mask[:, : width // 3] = True
+    out2 = tmp_path / "masked.tif"
+    export_s1.write_rtc_date(items, crs, transform, width, height, out2, aoi_mask=mask)
+    with rasterio.open(out2) as src:
+        vv2 = src.read(1)
+    assert np.isnan(vv2[:, width // 3:]).all()
+    assert np.isfinite(vv2[:, : width // 3]).mean() > 0.9
+
 
 CAL_XML = """<calibration><calibrationVectorList count="2">
 <calibrationVector><line>0</line><pixel count="3">0 50 99</pixel>

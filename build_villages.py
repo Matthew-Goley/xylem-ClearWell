@@ -542,7 +542,7 @@ def run_villages(smoke=False, logger=None, **kwargs):
     dem_path = common.dem_on_grid(paths, aoi, logger)
     if dem_path is not None:
         with rasterio.open(dem_path) as src:
-            dem = src.read(1).astype(np.float64)
+            dem = src.read(1).astype(np.float32)
         ok = np.isfinite(dem) & (unit_idx > 0)
         sums = np.bincount(unit_idx[ok], weights=dem[ok], minlength=n + 1)[1:]
         df["elev_mean_m"] = safe_div(sums, count_per_unit(unit_idx, ok, n))
