@@ -58,8 +58,13 @@ def to_utm_func(epsg):
 
 
 def _transform_geom(geom, transformer):
-    from shapely.ops import transform
-    return transform(transformer.transform, geom)
+    """Reproject a shapely geometry with a pyproj Transformer."""
+    import shapely
+
+    def _xy(coords):  # coords is an (N, 2) array of x, y
+        x, y = transformer.transform(coords[:, 0], coords[:, 1])
+        return np.column_stack([x, y])
+    return shapely.transform(geom, _xy)
 
 
 def item_solar_date(item):
@@ -262,7 +267,10 @@ def write_grd_date(items, crs, transform, width, height, out_path, logger):
     NOT done (documented in README): thermal noise removal, terrain
     flattening, border noise removal. Expect a larger domain shift.
     """
+    import warnings as py_warnings  # (named so it is not confused with our warning lists)
+
     import rasterio
+    import rasterio.errors
     from rasterio.warp import Resampling, reproject
     session = common.http_session()
     bands = []
@@ -279,9 +287,11 @@ def write_grd_date(items, crs, transform, width, height, out_path, logger):
             lut = calibration_lut(xml_text, dn.shape)
             sigma0 = np.where(dn > 0, dn ** 2 / np.maximum(lut, 1e-6) ** 2, np.nan).astype(np.float32)
             del dn, lut
-            reproject(sigma0, dst, gcps=gcps, src_crs=gcp_crs, dst_transform=transform,
-                      dst_crs=crs, resampling=Resampling.bilinear, src_nodata=np.nan,
-                      dst_nodata=np.nan, init_dest_nodata=False)
+            with py_warnings.catch_warnings():  # the array has GCPs, not a transform: expected
+                py_warnings.simplefilter("ignore", rasterio.errors.NotGeoreferencedWarning)
+                reproject(sigma0, dst, gcps=gcps, src_crs=gcp_crs, dst_transform=transform,
+                          dst_crs=crs, resampling=Resampling.bilinear, src_nodata=np.nan,
+                          dst_nodata=np.nan, init_dest_nodata=False)
             del sigma0
         bands.append(power_to_db(dst))
     common.write_tif(out_path, np.stack(bands), crs, transform, nodata=np.nan,
