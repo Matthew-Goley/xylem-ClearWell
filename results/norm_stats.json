@@ -1,0 +1,20 @@
+{
+  "vv_mean": -10.394217426240855,
+  "vv_std": 4.03259496504273,
+  "vh_mean": -17.24109972048038,
+  "vh_std": 4.75349321134561,
+  "clip_db": [
+    -50.0,
+    5.0
+  ],
+  "n_tiles": 252,
+  "n_valid_pixels": [
+    64735152,
+    64735152
+  ],
+  "split": "train",
+  "source": "Sen1Floods11 v1.1 HandLabeled S1Hand",
+  "smoke": false,
+  "generated_by": "train.py compute_norm_stats",
+  "generated_at": "2026-11-12T07:11:55.817637"
+}

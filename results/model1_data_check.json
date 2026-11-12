@@ -1,0 +1,14 @@
+{
+  "water_mean_vv_db": -16.83004692767803,
+  "nonwater_mean_vv_db": -9.77962988338829,
+  "water_darker_than_nonwater": true,
+  "n_water_pixels": 5446678,
+  "n_nonwater_pixels": 51832579,
+  "n_tiles": 252,
+  "plotted_tiles": [
+    "India_943439",
+    "Mekong_1248200",
+    "Mekong_52610",
+    "Paraguay_989230"
+  ]
+}
