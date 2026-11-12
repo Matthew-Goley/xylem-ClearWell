@@ -312,6 +312,18 @@ def write_grd_date(items, crs, transform, width, height, out_path, logger, aoi_m
                    "(no thermal noise removal, no terrain flattening)")
 
 
+def matches_grid(path, crs, transform, width, height):
+    """True if an existing GeoTIFF is on exactly this grid (so it can be reused)."""
+    import rasterio
+    try:
+        with rasterio.open(path) as src:
+            return (src.width == width and src.height == height and src.count == 2
+                    and src.crs.to_string() == str(crs)
+                    and np.allclose(list(src.transform)[:6], list(transform)[:6]))
+    except Exception:  # noqa: BLE001 - unreadable file: not reusable
+        return False
+
+
 def pass_stats(path):
     """Per-band count/sum/sum of squares of clipped dB and the water-ish fraction.
 
@@ -517,6 +529,10 @@ def run_export(smoke=False, logger=None, extra_normal=False, **kwargs):
             out_path = paths.assam / kind / f"{day}.tif"
             out_path.parent.mkdir(parents=True, exist_ok=True)
             items = groups_items[(okey, day)]
+            if out_path.exists() and not matches_grid(out_path, crs, transform, width, height):
+                logger.warning(f"{out_path} is on a different grid (districts or settings changed): "
+                               "downloading it again")
+                out_path.unlink()
             if not out_path.exists():
                 logger.info(f"Exporting {kind} pass {day} ({len(items)} scene(s)) -> {out_path}")
 

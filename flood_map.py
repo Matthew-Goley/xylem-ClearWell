@@ -128,14 +128,19 @@ def predict_raster(model, src_path, dst_path, stats, device, use_amp, logger=Non
 # ---------------------------------------------------------------------------
 def normal_water_mask(water_masks, min_frac=None):
     """uint8 mask: 1 = water in >= min_frac of the passes where the pixel was seen,
-    0 = not normal water, 255 = never seen in any normal pass."""
+    0 = not normal water, 255 = never seen in any normal pass.
+
+    water_masks can be a list or a generator (then only one pass is in memory at a time).
+    """
     min_frac = config.NORMAL_WATER_MIN_FRAC if min_frac is None else min_frac
-    water_count = np.zeros(water_masks[0].shape, dtype=np.int16)
-    valid_count = np.zeros(water_masks[0].shape, dtype=np.int16)
+    water_count = valid_count = None
     for m in water_masks:
+        if water_count is None:
+            water_count = np.zeros(m.shape, dtype=np.int16)
+            valid_count = np.zeros(m.shape, dtype=np.int16)
         water_count += (m == 1)
         valid_count += (m != NODATA_U8)
-    out = np.zeros(water_masks[0].shape, dtype=np.uint8)
+    out = np.zeros(water_count.shape, dtype=np.uint8)
     seen = valid_count > 0
     out[seen & (water_count >= min_frac * valid_count)] = 1
     out[~seen] = NODATA_U8
@@ -427,7 +432,7 @@ def run_flood_map(smoke=False, logger=None, **kwargs):
     if not water_paths["flood"] or not water_paths["normal"]:
         return common.result("FAILED", "need at least one flood pass and one normal pass", warnings)
 
-    normal = normal_water_mask([read_u8(p) for p in water_paths["normal"].values()])
+    normal = normal_water_mask(read_u8(p) for p in water_paths["normal"].values())
     common.write_tif(paths.outputs / "normal_water.tif", normal, crs, transform,
                      nodata=NODATA_U8, dtype="uint8")
     districts_utm = common.districts_for_aoi(paths, aoi)
@@ -437,10 +442,11 @@ def run_flood_map(smoke=False, logger=None, **kwargs):
     logger.info(f"Normal water: {float((normal[in_districts] == 1).mean()):.3f} of the districts; "
                 f"{unseen:.3f} never seen in a normal pass (treated as no data)")
     if unseen > 0.05:
-        warnings.append(f"{unseen:.1%} of the grid has no normal-year observation")
+        warnings.append(f"{unseen:.1%} of the district area has no normal-year observation")
 
     min_px = min_blob_pixels(px)
     removed_total = 0
+    shutil.rmtree(paths.outputs / "flood_by_pass", ignore_errors=True)  # no stale passes
     for day, wpath in sorted(water_paths["flood"].items()):
         flood, removed = flood_mask_for_pass(read_u8(wpath), normal, min_px)
         removed_total += removed

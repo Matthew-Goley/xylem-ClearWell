@@ -95,6 +95,8 @@ def test_write_rtc_date_mosaics_two_scenes(tmp_path, monkeypatch):
     assert np.nanmax(vv) == pytest.approx(-10.0, abs=0.01)
     assert np.nanmin(vv) == pytest.approx(-20.0, abs=0.01)
     assert np.nanmean(vh) < np.nanmean(vv)
+    assert export_s1.matches_grid(out, crs, transform, width, height)
+    assert not export_s1.matches_grid(out, crs, transform, width + 1, height)
     stats = export_s1.pass_stats(out)
     assert stats["valid_fraction"] > 0.9 and 0 < stats["waterish_fraction"] < 1
     pooled = export_s1.pooled_mean_std([stats])
