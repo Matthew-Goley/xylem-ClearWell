@@ -1,0 +1,17 @@
+{
+  "best_val_iou": 0.6272122867037351,
+  "best_epoch": 7,
+  "epochs_run": 17,
+  "early_stopped": true,
+  "encoder_weights_used": "imagenet",
+  "batch_size": 8,
+  "device": "cuda",
+  "amp": true,
+  "verdict_ok": true,
+  "verdict": "loss falls: True (first 1.336, last-3 mean 0.645); val IoU rises: True (first 0.391, best 0.627); levels off: True (early stop True, last-5 range 0.528)",
+  "smoke": false,
+  "learning_rate": 0.0003,
+  "optimizer": "AdamW + cosine schedule",
+  "train_tiles": 252,
+  "valid_tiles": 89
+}

@@ -15,7 +15,7 @@ One line per decision that the original spec left open.
 
 ## Model 1
 - Radar clip range -50 to +5 dB (the example in the spec); NaN/inf pixels become 0 after normalization (the training mean).
-- Optimizer: AdamW, one learning rate 3e-4 for all layers, weight decay 1e-4, cosine schedule over the max epochs (simplest stable choice).
+- Optimizer: AdamW, cosine schedule over 60 epochs, weight decay 1e-4, patience 20. Decoder lr 3e-4, encoder lr 3e-5 (ENCODER_LR_MULT 0.1), chosen on validation IoU only from 4 configs x 3 seeds (results/model1_sweep.md); the old single 3e-4 rate was unstable (run 1).
 - Water IoU is pooled over all valid pixels of a split (micro IoU); the mean of per-tile IoUs is also saved in `model1_metrics.json`.
 - Test comparison mask: pixels where the hand label is 0/1 AND the Otsu label is 0/1, identical for U-Net and Otsu.
 - Example and data-check tiles are picked with a fixed random seed (at least one India tile), not by hand.
@@ -43,8 +43,7 @@ One line per decision that the original spec left open.
 - `mean_duration_days` is the mean duration over the flooded pixels of a unit (0 if none flooded).
 - `first_flood_date` is the first pass in which at least 1% of the unit is flooded.
 - `elev_pctile` is the percentile of the unit's mean elevation within its district.
-- WorldPop file URL is asked from the WorldPop REST API at run time (aliases tried in order); hard-coded URLs are only fallbacks; a hand-downloaded file in `data/manual/` wins.
-- WorldPop is read remotely for the AOI window only (GDAL /vsicurl/) and the small clip is cached; the full India file is downloaded only if windowed reads fail.
+- WorldPop: a hand-downloaded `data/manual/worldpop.tif` wins; otherwise the full constrained 2020 India file is downloaded once to `data/worldpop/` (data.worldpop.org has no HTTP range support, so remote windowed reads cannot work), the AOI window is clipped from the local file and the small clip is cached. Two download tries, HEAD size check and free-disk check first; if it fails, population is marked unavailable.
 - No Census 2011 drinking-water table could be fetched reliably (censusindia.gov.in and data.gov.in were unreachable here and need manual steps), so the code reads a hand-filled `data/manual/census_water.csv` or excludes the feature.
 - Percentile ranks give tied values the lowest rank, scaled (rank - 1) / (n - 1), so all zero-flood units get 0 instead of a middle value.
 - If one unit lacks one value (for example no DEM), its weights are renormalized over the values it has.

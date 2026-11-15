@@ -1,0 +1,101 @@
+{
+  "groups": {
+    "test_all": {
+      "n_tiles": 90,
+      "n_valid_pixels": 20517367,
+      "unet": {
+        "iou": 0.6565959689619165,
+        "precision": 0.8429511287687281,
+        "recall": 0.7481120189735322,
+        "mean_tile_iou": 0.37502522964415436
+      },
+      "otsu": {
+        "iou": 0.5458456321591642,
+        "precision": 0.6811499390506381,
+        "recall": 0.7331839237816439,
+        "mean_tile_iou": 0.3273998558394092
+      },
+      "unet_counts": {
+        "tp": 1919731,
+        "fp": 357662,
+        "fn": 646370,
+        "tn": 17593604
+      },
+      "otsu_counts": {
+        "tp": 1881424,
+        "fp": 880705,
+        "fn": 684677,
+        "tn": 17070561
+      }
+    },
+    "test_india": {
+      "n_tiles": 14,
+      "n_valid_pixels": 3224168,
+      "unet": {
+        "iou": 0.6599730379227478,
+        "precision": 0.861823451471181,
+        "recall": 0.7380711340161135,
+        "mean_tile_iou": 0.41492563650041375
+      },
+      "otsu": {
+        "iou": 0.7044084559734012,
+        "precision": 0.8804259060464565,
+        "recall": 0.7789272359932237,
+        "mean_tile_iou": 0.40587023617669443
+      },
+      "unet_counts": {
+        "tp": 506691,
+        "fp": 81238,
+        "fn": 179816,
+        "tn": 2456423
+      },
+      "otsu_counts": {
+        "tp": 534739,
+        "fp": 72625,
+        "fn": 151768,
+        "tn": 2465036
+      }
+    },
+    "bolivia": {
+      "n_tiles": 15,
+      "n_valid_pixels": 2867751,
+      "unet": {
+        "iou": 0.5334933643086925,
+        "precision": 0.7893218537355656,
+        "recall": 0.6220734388742304,
+        "mean_tile_iou": 0.33518695612675586
+      },
+      "otsu": {
+        "iou": 0.6972798500203392,
+        "precision": 0.7809091251220638,
+        "recall": 0.8668623570800352,
+        "mean_tile_iou": 0.4531735618327523
+      },
+      "unet_counts": {
+        "tp": 282919,
+        "fp": 75514,
+        "fn": 171881,
+        "tn": 2337437
+      },
+      "otsu_counts": {
+        "tp": 394249,
+        "fp": 110610,
+        "fn": 60551,
+        "tn": 2302341
+      }
+    }
+  },
+  "threshold": 0.5,
+  "iou_definition": "water IoU pooled over all valid pixels of all tiles in the group; mean_tile_iou is the average of per-tile IoUs",
+  "valid_mask": "hand label in {0,1} and Otsu label in {0,1}",
+  "checkpoint": {
+    "epoch": 7,
+    "val_iou": 0.6272122867037351,
+    "encoder_weights": "imagenet",
+    "smoke": false
+  },
+  "device": "cuda",
+  "smoke": false,
+  "warnings": [],
+  "generated_at": "2026-11-14T17:04:27.921401"
+}

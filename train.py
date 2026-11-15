@@ -527,9 +527,18 @@ def plot_training_curves(rows, out_path):
     plt.close(fig)
 
 
-def _fit(paths, logger, smoke, batch_size, device):
-    """One full training run at a given batch size. Returns a summary dict."""
-    set_seed()
+def _fit(paths, logger, smoke, batch_size, device, lr=None, encoder_lr_mult=None, seed=None,
+         ckpt_path=None, log_path=None, save_curves=True):
+    """One full training run at a given batch size. Returns a summary dict.
+
+    The keyword options default to the config values; sweep_train.py overrides them
+    (and the output paths) so a sweep never touches outputs/unet.pt or results/.
+    """
+    lr = config.LEARNING_RATE if lr is None else lr
+    encoder_lr_mult = config.ENCODER_LR_MULT if encoder_lr_mult is None else encoder_lr_mult
+    seed = config.SEED if seed is None else seed
+    ckpt_path = ckpt_path or paths.checkpoint
+    set_seed(seed)
     stats = config.load_norm_stats(paths)
     train_ds = Sen1Floods11Dataset(paths, get_split_ids(paths, "train", smoke), stats,
                                    augment_data=True, crop_size=config.CROP_SIZE)
@@ -538,7 +547,7 @@ def _fit(paths, logger, smoke, batch_size, device):
     use_amp = config.USE_AMP and device.type == "cuda"
     workers = config.NUM_WORKERS
     generator = torch.Generator()
-    generator.manual_seed(config.SEED)
+    generator.manual_seed(seed)
     loader_kw = {"num_workers": workers, "pin_memory": device.type == "cuda",
                  "persistent_workers": workers > 0}
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
@@ -548,15 +557,18 @@ def _fit(paths, logger, smoke, batch_size, device):
 
     model, weights_used = build_model(config.ENCODER_WEIGHTS, logger)
     model.to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config.LEARNING_RATE,
-                                  weight_decay=config.WEIGHT_DECAY)
+    # The encoder can use a lower rate than the decoder and head (multiplier 1.0 = one rate).
+    groups = [{"params": list(model.decoder.parameters()) + list(model.segmentation_head.parameters()),
+               "lr": lr},
+              {"params": list(model.encoder.parameters()), "lr": lr * encoder_lr_mult}]
+    optimizer = torch.optim.AdamW(groups, weight_decay=config.WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
     logger.info(f"Training on {device} | batch {batch_size} | AMP {use_amp} | workers {workers} "
                 f"| train tiles {len(train_ds)} | valid tiles {len(valid_ds)} | max epochs "
                 f"{epochs} | encoder weights {weights_used}")
 
-    log_path = paths.outputs / "train_log.csv"
+    log_path = log_path or paths.outputs / "train_log.csv"
     fields = ["epoch", "train_loss", "val_loss", "val_iou", "val_precision", "val_recall",
               "lr", "seconds"]
     with open(log_path, "w", newline="") as f:
@@ -598,10 +610,11 @@ def _fit(paths, logger, smoke, batch_size, device):
                     "norm_stats": stats, "clip_db": [config.CLIP_DB_MIN, config.CLIP_DB_MAX],
                     "batch_size": batch_size, "smoke": smoke,
                     "saved_at": datetime.now().isoformat()}
-            tmp = paths.checkpoint.with_name("unet.tmp.pt")
+            ckpt_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = ckpt_path.with_name(ckpt_path.stem + ".tmp.pt")
             torch.save(ckpt, tmp)
-            os.replace(tmp, paths.checkpoint)
-            logger.info(f"  new best val IoU {best_iou:.4f}, checkpoint saved to {paths.checkpoint}")
+            os.replace(tmp, ckpt_path)
+            logger.info(f"  new best val IoU {best_iou:.4f}, checkpoint saved to {ckpt_path}")
         else:
             bad_epochs += 1
             if bad_epochs >= config.EARLY_STOP_PATIENCE:
@@ -609,14 +622,16 @@ def _fit(paths, logger, smoke, batch_size, device):
                 logger.info(f"Early stopping: no val IoU improvement for {bad_epochs} epochs")
                 break
 
-    plot_training_curves(rows, paths.results / "model1_training_curves.png")
+    if save_curves:
+        plot_training_curves(rows, paths.results / "model1_training_curves.png")
     ok, text = training_verdict(rows, early_stopped)
     logger.info(f"Training verdict: {'OK' if ok else ('UNCLEAR' if ok is None else 'NOT OK')}: {text}")
     return {"best_val_iou": best_iou, "best_epoch": best_epoch, "epochs_run": len(rows),
             "early_stopped": early_stopped, "encoder_weights_used": weights_used,
             "batch_size": batch_size, "device": str(device), "amp": use_amp,
             "verdict_ok": ok, "verdict": text, "smoke": smoke,
-            "learning_rate": config.LEARNING_RATE, "optimizer": "AdamW + cosine schedule",
+            "learning_rate": lr, "encoder_lr_mult": encoder_lr_mult, "seed": seed,
+            "optimizer": "AdamW + cosine schedule",
             "train_tiles": len(train_ds), "valid_tiles": len(valid_ds)}
 
 
@@ -658,6 +673,19 @@ def run_train(smoke=False, logger=None, **kwargs):
 # ---------------------------------------------------------------------------
 # Stage test (run ONCE)
 # ---------------------------------------------------------------------------
+def sweep_note(paths):
+    """Line for model1_table.md: how many settings were tried on validation (empty if no sweep)."""
+    sweep = paths.results / "model1_sweep.csv"
+    if not sweep.exists():
+        return ""
+    with open(sweep, newline="") as f:
+        rows = list(csv.DictReader(f))
+    runs = sum(int(r["n_seeds"]) for r in rows)
+    return (f"\n{len(rows)} training configurations ({runs} training runs including seeds) were "
+            "compared on the validation split before this one was chosen (results/model1_sweep.md); "
+            "the test tiles were scored once, after that choice.\n")
+
+
 def load_trained_model(paths, device, logger=None):
     """Load outputs/unet.pt. Returns (model, checkpoint dict)."""
     if not paths.checkpoint.exists():
@@ -785,7 +813,7 @@ def run_test(smoke=False, logger=None, **kwargs):
     header = "SMOKE RUN: numbers are not meaningful.\n\n" if smoke else ""
     (paths.results / "model1_table.md").write_text(
         header + "Water IoU on held-out tiles, generated by train.py (stage test).\n\n"
-        + "\n".join(lines) + "\n", encoding="utf-8")
+        + "\n".join(lines) + "\n" + sweep_note(paths), encoding="utf-8")
 
     # Example figure: 6 test tiles, at least 2 from India, chosen with a fixed seed.
     rng = random.Random(config.SEED)

@@ -138,10 +138,11 @@ ENCODER_WEIGHTS = "imagenet"   # falls back to None (random init) if download fa
 BATCH_SIZE = 8
 BATCH_SIZE_OOM_FALLBACK = 4    # used automatically after a CUDA out-of-memory error
 CROP_SIZE = 256                # random training crops; validation uses full 512 tiles
-LEARNING_RATE = 3e-4           # AdamW, one rate for all layers, cosine schedule
+LEARNING_RATE = 3e-4           # AdamW decoder and head rate, cosine schedule
+ENCODER_LR_MULT = 0.1          # encoder lr = LEARNING_RATE * this; chosen on val IoU, see results/model1_sweep.md
 WEIGHT_DECAY = 1e-4
 MAX_EPOCHS = 60
-EARLY_STOP_PATIENCE = 10       # epochs without val IoU improvement
+EARLY_STOP_PATIENCE = 20       # epochs without val IoU improvement
 USE_AMP = True                 # mixed precision, only used on CUDA
 
 # ---------------------------------------------------------------------------
@@ -152,19 +153,19 @@ S1_COLLECTION = "sentinel-1-rtc"           # first choice (terrain corrected gam
 S1_FALLBACK_COLLECTION = "sentinel-1-grd"  # only used if RTC search fails
 
 STATE_NAME = "Assam"
-FLOOD_YEAR = 2020
-FLOOD_START = "2020-06-25"
-FLOOD_END = "2020-08-10"
+FLOOD_YEAR = 2019
+FLOOD_START = "2019-07-01"
+FLOOD_END = "2019-08-10"
 # Normal (non-flood) years: same calendar dates as the flood window.
 NORMAL_YEARS = [2018, 2021]
-EXTRA_NORMAL_YEARS = [2019]  # added only with --extra-normal
+EXTRA_NORMAL_YEARS = []  # added only with --extra-normal
 
 # Candidate districts (Brahmaputra flood-prone). "auto" picks 2 or 3 adjacent
 # ones with the best single-orbit Sentinel-1 coverage. You can also set an
 # explicit list, for example DISTRICTS = ["Dhemaji", "Lakhimpur", "Majuli"].
 CANDIDATE_DISTRICTS = ["Dhemaji", "Lakhimpur", "Majuli", "Jorhat",
                        "Barpeta", "Nalbari", "Morigaon"]
-DISTRICTS = "auto"
+DISTRICTS = ["Morigaon", "Nagaon"]
 # Used when "auto" cannot run (for example no boundaries available).
 DEFAULT_DISTRICTS = ["Dhemaji", "Lakhimpur", "Majuli"]
 MAX_DISTRICTS = 3
@@ -249,15 +250,14 @@ VILLAGE_MAX_RADIUS_M = 1500   # Voronoi cells are clipped to this radius
 GRID_CELL_M = 1000            # fallback grid cell size
 FIRST_FLOOD_MIN_FRAC = 0.01   # unit counts as "flooded on date D" if >= 1% flooded
 
-# WorldPop 2020 population (100 m). The REST API is asked for the file URL;
-# the direct URLs are fallbacks. A file you download yourself to
-# data/manual/worldpop.tif is used first.
-WORLDPOP_API = "https://hub.worldpop.org/rest/data/pop/{alias}?iso3=IND"
-WORLDPOP_ALIASES = ["cic2020_100m", "cic2020_UNadj_100m", "wpgp"]
-WORLDPOP_DIRECT_URLS = [
+# WorldPop 2020 population (100 m). The server has no HTTP range support, so the
+# full India file is downloaded once to data/worldpop/ and read locally. A file you
+# download yourself to data/manual/worldpop.tif is used first.
+WORLDPOP_URLS = [
     "https://data.worldpop.org/GIS/Population/Global_2000_2020_Constrained/2020/BSGM/IND/ind_ppp_2020_constrained.tif",
-    "https://data.worldpop.org/GIS/Population/Global_2000_2020/2020/IND/ind_ppp_2020.tif",
 ]
+WORLDPOP_DOWNLOAD_TRIES = 2          # the file is large; do not hammer the server
+WORLDPOP_FREE_DISK_MARGIN_GB = 1.0   # keep this much disk free after the download
 
 # Google Open Buildings v3. "points" files hold one row per building
 # (centroid, area, confidence), which is enough to count buildings.

@@ -178,3 +178,88 @@ def test_clip_raster_to_bbox(tmp_path):
         assert clip.shape == (30, 20)
         assert c.transform.c == pytest.approx(90.2) and c.transform.f == pytest.approx(29.8)
     assert clip[0, 0] == data[20, 20]
+
+
+def _write_pop_raster(path):
+    import rasterio
+    from rasterio.transform import from_origin
+    data = np.arange(100 * 100, dtype=np.float32).reshape(100, 100)
+    with rasterio.open(path, "w", driver="GTiff", width=100, height=100, count=1, dtype="float32",
+                       crs="EPSG:4326", transform=from_origin(90.0, 30.0, 0.01, 0.01)) as dst:
+        dst.write(data, 1)
+    return data
+
+
+class _Log:
+    def __getattr__(self, name):
+        return lambda *a, **k: None
+
+
+def _worldpop_setup(tmp_path, monkeypatch):
+    import config
+    paths = config.get_paths(smoke=True, root=tmp_path)
+    paths.make_dirs()
+    url = "https://example.invalid/ind_pop.tif"
+    monkeypatch.setattr(config, "WORLDPOP_URLS", [url])
+    aoi = {"bbox_lonlat": (90.2, 29.5, 90.4, 29.8)}
+    return paths, aoi, paths.data / "worldpop" / "ind_pop.tif"
+
+
+def test_get_worldpop_reads_existing_local_file_without_downloading(tmp_path, monkeypatch):
+    import rasterio
+    paths, aoi, full = _worldpop_setup(tmp_path, monkeypatch)
+    full.parent.mkdir(parents=True)
+    data = _write_pop_raster(full)
+
+    def boom(*a, **k):
+        raise AssertionError("must not download when the local file opens")
+    monkeypatch.setattr(build_villages, "download_worldpop", boom)
+    path, source = build_villages.get_worldpop(paths, aoi, _Log())
+    assert path is not None and source.endswith("ind_pop.tif")
+    with rasterio.open(path) as c:
+        assert c.read(1).shape == (30, 20)
+        assert c.read(1)[0, 0] == data[20, 20]
+
+
+def test_get_worldpop_redownloads_broken_file_and_reports_failure(tmp_path, monkeypatch):
+    paths, aoi, full = _worldpop_setup(tmp_path, monkeypatch)
+    full.parent.mkdir(parents=True)
+    full.write_bytes(b"not a tif")
+
+    def fail(url, dest, logger):
+        raise RuntimeError("offline")
+    monkeypatch.setattr(build_villages, "download_worldpop", fail)
+    path, source = build_villages.get_worldpop(paths, aoi, _Log())
+    assert path is None and source is None      # population is reported unavailable
+    assert not full.exists()                     # the broken file was removed
+
+
+def test_download_worldpop_streams_and_checks_disk(tmp_path, monkeypatch):
+    paths, aoi, full = _worldpop_setup(tmp_path, monkeypatch)
+    src = tmp_path / "remote.tif"
+    _write_pop_raster(src)
+    body = src.read_bytes()
+
+    class Resp:
+        status_code = 200
+        headers = {"Content-Length": str(len(body))}
+        def raise_for_status(self): pass
+        def iter_content(self, chunk_size): yield body
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    class Session:
+        def head(self, url, **k): return Resp()
+        def get(self, url, **k): return Resp()
+
+    monkeypatch.setattr(build_villages.common, "http_session", lambda: Session())
+    out = build_villages.download_worldpop("https://example.invalid/ind_pop.tif", full, _Log())
+    assert out.read_bytes() == body and build_villages.raster_opens(out)
+    assert not full.with_name(full.name + ".part").exists()
+
+    # not enough disk space -> clear error before any download starts
+    full.unlink()
+    import shutil
+    monkeypatch.setattr(shutil, "disk_usage", lambda p: shutil._ntuple_diskusage(10, 9, 1))
+    with pytest.raises(RuntimeError, match="not enough free disk"):
+        build_villages.download_worldpop("https://example.invalid/ind_pop.tif", full, _Log())

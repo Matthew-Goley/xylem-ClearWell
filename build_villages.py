@@ -169,30 +169,81 @@ def clip_raster_to_bbox(src_path, bbox_lonlat, out_path):
     return out_path
 
 
-def worldpop_urls(logger):
-    """Candidate WorldPop 2020 India GeoTIFF URLs: REST API answers first, then fallbacks."""
-    urls = []
+def raster_opens(path):
+    """True if rasterio can open the file and read its header."""
+    import rasterio
+    try:
+        with rasterio.open(path) as src:
+            return src.width > 0 and src.height > 0
+    except Exception:  # noqa: BLE001 - any failure means "not a usable raster"
+        return False
+
+
+def download_worldpop(url, dest, logger):
+    """Download the full WorldPop raster to dest (streamed, with progress bar and resume).
+
+    data.worldpop.org does not support HTTP range requests, so GDAL cannot read a
+    window remotely and a partial file usually restarts from zero. Checks the size
+    with a HEAD request and the free disk space first. Returns dest.
+    """
+    import shutil
+
+    from tqdm import tqdm
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    part = dest.with_name(dest.name + ".part")
     session = common.http_session()
-    for alias in config.WORLDPOP_ALIASES:
-        try:
-            resp = session.get(config.WORLDPOP_API.format(alias=alias), timeout=60)
+
+    size = None
+    try:
+        head = session.head(url, allow_redirects=True, timeout=60)
+        head.raise_for_status()
+        size = int(head.headers.get("Content-Length", 0)) or None
+    except Exception as err:  # noqa: BLE001
+        if common.is_permanent_error(err):
+            raise
+        logger.warning(f"WorldPop HEAD request failed ({err}); size unknown, continuing")
+    if size:
+        logger.info(f"WorldPop file {url} is {size / 1e9:.2f} GB")
+        have = part.stat().st_size if part.exists() else 0
+        need = max(size - have, 0) + int(config.WORLDPOP_FREE_DISK_MARGIN_GB * 1e9)
+        free = shutil.disk_usage(dest.parent).free
+        if free < need:
+            raise RuntimeError(f"not enough free disk space for WorldPop: need about "
+                               f"{need / 1e9:.1f} GB, {free / 1e9:.1f} GB free in {dest.parent}")
+
+    def _do():
+        done = part.stat().st_size if part.exists() else 0
+        headers = {"Range": f"bytes={done}-"} if done else {}
+        with session.get(url, stream=True, timeout=120, headers=headers) as resp:
+            if resp.status_code == 416:  # the partial file already has everything
+                return
             resp.raise_for_status()
-            entries = resp.json().get("data", [])
-            entries = sorted(entries, key=lambda e: str(e.get("popyear", "")) == "2020", reverse=True)
-            for e in entries:
-                urls += [u for u in e.get("files", []) if u.lower().endswith(".tif")]
-            logger.info(f"WorldPop API '{alias}': {len(entries)} entries")
-        except Exception as err:  # noqa: BLE001
-            logger.warning(f"WorldPop API '{alias}' failed: {err}")
-    return urls + [u for u in config.WORLDPOP_DIRECT_URLS if u not in urls]
+            if done and resp.status_code != 206:  # server ignored Range: start over
+                logger.info("WorldPop server ignored the resume request; restarting the download")
+                done = 0
+            total = (int(resp.headers.get("Content-Length", 0)) + done) or size
+            with open(part, "ab" if done else "wb") as f, tqdm(
+                    total=total, initial=done, unit="B", unit_scale=True, desc=dest.name,
+                    disable=not sys.stdout.isatty()) as bar:
+                for chunk in resp.iter_content(chunk_size=1 << 20):
+                    f.write(chunk)
+                    bar.update(len(chunk))
+
+    common.retry(_do, tries=config.WORLDPOP_DOWNLOAD_TRIES, what=f"WorldPop download {url}",
+                 logger=logger)
+    if size and part.stat().st_size != size:
+        raise RuntimeError(f"WorldPop download incomplete: {part.stat().st_size} of {size} bytes")
+    part.replace(dest)
+    logger.info(f"WorldPop downloaded to {dest} ({dest.stat().st_size / 1e9:.2f} GB)")
+    return dest
 
 
 def get_worldpop(paths, aoi, logger):
     """Path to a WorldPop 2020 100 m GeoTIFF covering the AOI, or None. Source string too.
 
-    Order: data/manual/worldpop.tif, a cached clip for this AOI, a remote windowed
-    read of only the AOI (/vsicurl/, a few MB), and last a full download of the
-    India file (large) that is then clipped.
+    Order: data/manual/worldpop.tif, a cached clip for this AOI, then the full India
+    raster in data/worldpop/ (downloaded once, skipped if it is already there and
+    opens). The AOI window is always read from that local file.
     """
     manual = paths.manual / "worldpop.tif"
     if manual.exists():
@@ -201,25 +252,22 @@ def get_worldpop(paths, aoi, logger):
     source_note = clip.with_suffix(".source.txt")
     if clip.exists():
         return clip, source_note.read_text() if source_note.exists() else "cached clip"
-    urls = worldpop_urls(logger)
-    for url in urls:
+    for url in config.WORLDPOP_URLS:
+        full = paths.data / "worldpop" / url.split("/")[-1]
         try:
-            common.retry(clip_raster_to_bbox, "/vsicurl/" + url, aoi["bbox_lonlat"], clip,
-                         what=f"WorldPop window read {url}", logger=logger)
-            source_note.write_text(url)
-            logger.info(f"WorldPop: read the AOI window from {url}")
-            return clip, url
-        except Exception as err:  # noqa: BLE001
-            logger.warning(f"WorldPop window read {url} failed: {err}")
-    for url in urls:
-        try:
-            full = paths.cache / "worldpop" / url.split("/")[-1]
-            common.download_file(url, full, logger, timeout=120)
+            if full.exists() and raster_opens(full):
+                logger.info(f"WorldPop: using existing {full}")
+            else:
+                full.unlink(missing_ok=True)  # exists but does not open: a broken file
+                download_worldpop(url, full, logger)
+                if not raster_opens(full):
+                    full.unlink(missing_ok=True)
+                    raise RuntimeError("downloaded file does not open as a raster")
             clip_raster_to_bbox(full, aoi["bbox_lonlat"], clip)
             source_note.write_text(url)
             return clip, url
         except Exception as err:  # noqa: BLE001
-            logger.warning(f"WorldPop download {url} failed: {err}")
+            logger.warning(f"WorldPop {url} failed: {err}")
     return None, None
 
 

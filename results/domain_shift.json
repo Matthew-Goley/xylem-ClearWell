@@ -1,0 +1,39 @@
+{
+  "note": "Training: Sen1Floods11 S1Hand (Earth Engine GRD, sigma0 dB). Assam: sentinel-1-rtc (gamma0 RTC) converted to dB. Both clipped to the same range. Flood-window imagery has more water, so its mean is expected to be lower even without a sensor shift.",
+  "train": {
+    "vv_mean": -10.394217426240855,
+    "vv_std": 4.03259496504273,
+    "vh_mean": -17.24109972048038,
+    "vh_std": 4.75349321134561
+  },
+  "assam_all": {
+    "vv_mean": -9.104288958873852,
+    "vv_std": 4.749263673205046,
+    "vh_mean": -15.54647872291951,
+    "vh_std": 4.242486186612265,
+    "n_pixels": 344272631,
+    "n_passes": 8
+  },
+  "assam_flood": {
+    "vv_mean": -9.698522004154938,
+    "vv_std": 5.211783404599272,
+    "vh_mean": -16.371819675794292,
+    "vh_std": 4.6124106535656715,
+    "n_pixels": 86068157,
+    "n_passes": 2
+  },
+  "assam_normal": {
+    "vv_mean": -8.906211279414894,
+    "vv_std": 4.567585734946951,
+    "vh_mean": -15.27136507515771,
+    "vh_std": 4.074807722955932,
+    "n_pixels": 258204474,
+    "n_passes": 6
+  },
+  "normal_minus_train": {
+    "vv_mean": 1.4880061468259616,
+    "vv_std": 0.5349907699042209,
+    "vh_mean": 1.9697346453226707,
+    "vh_std": -0.6786854883896778
+  }
+}
