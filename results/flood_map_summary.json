@@ -1,0 +1,64 @@
+{
+  "smoke": false,
+  "flood_dates": [
+    "2019-07-23",
+    "2019-08-10"
+  ],
+  "normal_dates": [
+    "2018-07-10",
+    "2018-07-22",
+    "2018-08-03",
+    "2021-07-06",
+    "2021-07-18",
+    "2021-07-30"
+  ],
+  "revisit_interval_days": 18,
+  "duration_note": "duration = (last - first date of the longest run of consecutive flooded passes) + one revisit interval; resolution one interval",
+  "min_blob_pixels": 50,
+  "pixels_removed_by_cleanup": 619190,
+  "normal_water_fraction_of_districts": 0.1774033078570733,
+  "unseen_in_normal_fraction": 0.0,
+  "per_district": {
+    "Morigaon": {
+      "max_extent_flooded_km2": 440.6693,
+      "observed_km2": 1504.6653000000001,
+      "normal_water_km2": 370.9193,
+      "max_duration_days": 36
+    },
+    "Nagaon": {
+      "max_extent_flooded_km2": 346.30440000000004,
+      "observed_km2": 2505.1331,
+      "normal_water_km2": 340.4322,
+      "max_duration_days": 36
+    }
+  },
+  "plausibility": {
+    "grid_m": 50,
+    "n_permutations": 200,
+    "distance_to_normal_water_m": {
+      "flooded_mean": 200.9841781090824,
+      "random_land_mean": 377.68157548382123,
+      "all_land_mean": 377.6431337054135,
+      "n_flooded_cells": 347207,
+      "p_value": 0.004975124378109453,
+      "flooded_lower_than_random": true
+    },
+    "elevation_m": {
+      "flooded_mean": 56.82769012451172,
+      "random_land_mean": 77.63500213623047,
+      "all_land_mean": 77.63623809814453,
+      "n_flooded_cells": 347207,
+      "p_value": 0.004975124378109453,
+      "flooded_lower_than_random": true
+    }
+  },
+  "threshold": 0.5,
+  "checkpoint": {
+    "checkpoint_saved_at": "2026-11-14T17:55:33.634321",
+    "threshold": 0.5,
+    "tta": false,
+    "tile": 512,
+    "overlap": 64
+  },
+  "generated_at": "2026-11-15T12:39:51.361814"
+}

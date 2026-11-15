@@ -1,0 +1,45 @@
+{
+  "smoke": false,
+  "generated_at": "2026-11-15T12:39:51.545195",
+  "sentinel2_optical": {
+    "status": "DONE",
+    "flood_pass": "2019-08-10",
+    "s2_date": "2019-08-12",
+    "days_apart": 2,
+    "clear_fraction": 0.5592275899433534,
+    "s2_items": [
+      "S2B_MSIL2A_20190812T041559_R090_T46REP_20201004T233244",
+      "S2B_MSIL2A_20190812T041559_R090_T46RDP_20201004T233241",
+      "S2B_MSIL2A_20190812T041559_R090_T46RDQ_20201004T233244",
+      "S2B_MSIL2A_20190812T041559_R090_T46RDP_20201004T233244",
+      "S2B_MSIL2A_20190812T041559_R090_T46REQ_20201004T233252",
+      "S2B_MSIL2A_20190812T041559_R090_T46REP_20201004T233248"
+    ],
+    "metrics_model_vs_s2": {
+      "iou": 0.4018618571590148,
+      "precision": 0.5821201000161317,
+      "recall": 0.5647934615939566,
+      "agreement": 0.9428183171953434,
+      "n_pixels": 6011488
+    },
+    "note": "Model water = U-Net water for that pass (flood + normal water). Reference = MNDWI > 0 on cloud-free pixels (SCL 4-7). Days apart matter: flood water can recede or rise between the two dates."
+  },
+  "jrc_gsw_normal_water": {
+    "status": "DONE",
+    "source": "Planetary Computer jrc-gsw",
+    "occurrence_threshold": 50,
+    "metrics_normal_water_vs_gsw": {
+      "iou": 0.117332518170376,
+      "precision": 0.12059370968586512,
+      "recall": 0.8126909782094365,
+      "agreement": 0.8403122869832662,
+      "n_pixels": 4773686
+    },
+    "note": "GSW occurrence = percent of 1984-2021 observations that were water. Our normal water comes from only a few monsoon-season passes, so some disagreement (seasonal water, paddy) is expected."
+  },
+  "visual_figure": {
+    "status": "DONE",
+    "pass": "2019-07-23",
+    "file": "results/assam_sanity_visual.png"
+  }
+}
