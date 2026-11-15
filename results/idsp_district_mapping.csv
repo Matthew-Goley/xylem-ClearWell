@@ -1,0 +1,22 @@
+query,match,score,method
+Jorhat,Jorhat,100.0,exact
+Kamrup,Kamrup,100.0,exact
+Lakhimpur,Lakhimpur,100.0,exact
+Dhubri,Dhubri,100.0,exact
+Hailakandi,Hailakandi,100.0,exact
+Nalbari,Nalbari,100.0,exact
+Udalguri,Udalguri,100.0,exact
+Sibsagar,Sivasagar,100.0,alias
+Tinsukia,Tinsukia,100.0,exact
+Barpeta,Barpeta,100.0,exact
+Darrang,Darrang,100.0,exact
+Golaghat,Golaghat,100.0,exact
+Dima Hasao,Dima Hasao,100.0,exact
+Sonitpur (Tezpur),Sonitpur,90.0,fuzzy
+Nagaon,Nagaon,100.0,exact
+Dibrugarh,Dibrugarh,100.0,exact
+Dhemaji,Dhemaji,100.0,exact
+Cachar,Cachar,100.0,exact
+Marigaon,Morigaon,100.0,alias
+Darrang (Mangaldoi),Darrang,90.0,fuzzy
+Karbi-Anglong (Diphu),,79.6774193548387,unmatched

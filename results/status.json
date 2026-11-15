@@ -13,7 +13,7 @@
       "reason": "",
       "warnings": [],
       "runtime_s": 0.1,
-      "finished_at": "2026-11-15T12:40:13",
+      "finished_at": "2026-11-15T12:49:32",
       "smoke": false
     },
     "train": {
@@ -67,27 +67,29 @@
       "smoke": false
     },
     "villages": {
-      "status": "NOT RUN",
-      "reason": "needs stage(s) flood_map to finish first",
+      "status": "OK",
+      "reason": "",
       "warnings": [],
-      "runtime_s": 0.0,
-      "finished_at": "2026-11-12T08:14:16",
+      "runtime_s": 101.9,
+      "finished_at": "2026-11-15T12:49:25",
       "smoke": false
     },
     "risk": {
-      "status": "NOT RUN",
-      "reason": "needs stage(s) villages to finish first",
+      "status": "OK",
+      "reason": "",
       "warnings": [],
-      "runtime_s": 0.0,
-      "finished_at": "2026-11-12T08:14:16",
+      "runtime_s": 3.6,
+      "finished_at": "2026-11-15T12:49:31",
       "smoke": false
     },
     "validate": {
-      "status": "NOT RUN",
-      "reason": "needs stage(s) risk to finish first",
-      "warnings": [],
-      "runtime_s": 0.0,
-      "finished_at": "2026-11-12T08:14:16",
+      "status": "OK",
+      "reason": "",
+      "warnings": [
+        "only 2 mapped district(s): district-level correlation not computable"
+      ],
+      "runtime_s": 0.7,
+      "finished_at": "2026-11-15T12:49:32",
       "smoke": false
     }
   },
@@ -98,7 +100,7 @@
     "torch": "2.15.0+cu132",
     "cuda_available": true,
     "gpu_name": "NVIDIA GeForce RTX 3080",
-    "gpu_free_vram_gb": 10.09,
+    "gpu_free_vram_gb": 11.67,
     "gpu_total_vram_gb": 12.88,
     "cuda_version": "13.2"
   }

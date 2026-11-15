@@ -1,0 +1,64 @@
+{
+  "components": {
+    "exposure": "flooded_frac",
+    "duration": "max_duration_days",
+    "exposed_people": "exposed_pop",
+    "well_reliance": "pct_shallow_well_handpump",
+    "low_elevation": "elev_pctile"
+  },
+  "weights_used": {
+    "exposure": 0.35,
+    "duration": 0.25,
+    "exposed_people": 0.15,
+    "well_reliance": 0.15,
+    "low_elevation": 0.1
+  },
+  "weights_config": {
+    "exposure": 0.35,
+    "duration": 0.25,
+    "exposed_people": 0.15,
+    "well_reliance": 0.15,
+    "low_elevation": 0.1
+  },
+  "dropped": [],
+  "n_units": 110,
+  "per_pass": [
+    {
+      "pass_index": 1,
+      "date": "2019-07-23",
+      "components": [
+        "exposure",
+        "exposed_people",
+        "well_reliance",
+        "low_elevation"
+      ],
+      "weights": {
+        "exposure": 0.4666666666666666,
+        "exposed_people": 0.19999999999999998,
+        "well_reliance": 0.19999999999999998,
+        "low_elevation": 0.13333333333333333
+      }
+    },
+    {
+      "pass_index": 2,
+      "date": "2019-08-10",
+      "components": [
+        "exposure",
+        "duration",
+        "exposed_people",
+        "well_reliance",
+        "low_elevation"
+      ],
+      "weights": {
+        "exposure": 0.35,
+        "duration": 0.25,
+        "exposed_people": 0.15,
+        "well_reliance": 0.15,
+        "low_elevation": 0.1
+      }
+    }
+  ],
+  "unit_source": "OSM place=village/hamlet Voronoi cells clipped to district and 1500 m radius (110 points)",
+  "smoke": false,
+  "generated_at": "2026-11-15T12:49:31.658794"
+}

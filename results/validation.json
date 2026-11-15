@@ -1,0 +1,311 @@
+{
+  "status": "DONE",
+  "smoke": false,
+  "idsp": {
+    "file": "C:\\Users\\Matthew\\Documents\\_Dev_ALL\\xylem-ClearWell\\data\\manual\\idsp_weather.csv",
+    "raw_rows": 60,
+    "raw_columns": [
+      "epiclim_row",
+      "state",
+      "district",
+      "disease",
+      "cases",
+      "deaths",
+      "outbreak_date",
+      "reported_in",
+      "precip"
+    ],
+    "exact_duplicates_removed": 0,
+    "detected_columns": {
+      "district": "district",
+      "state": "state",
+      "disease": "disease",
+      "cases": "cases",
+      "deaths": "deaths",
+      "date": "outbreak_date",
+      "year": null,
+      "week": null,
+      "rainfall": "precip"
+    },
+    "rows_without_date": 0,
+    "state_values_kept": [
+      "Assam"
+    ],
+    "rows_in_state": 60,
+    "diseases_kept": [
+      "Acute Diarrhoeal Disease",
+      "Cholera"
+    ],
+    "diseases_dropped": [
+      "Acute Encephalitis Syndrome",
+      "Dengue",
+      "Malaria"
+    ],
+    "rows_waterborne": 41,
+    "unmatched_districts": [
+      "Karbi-Anglong (Diphu)"
+    ],
+    "key_duplicates_removed": 0,
+    "coverage_start": "2018-03-10",
+    "coverage_end": "2020-10-28",
+    "rows_per_year": {
+      "2018": 16,
+      "2019": 20,
+      "2020": 4
+    },
+    "rows_per_month": {
+      "2018-03": 1,
+      "2018-04": 2,
+      "2018-05": 5,
+      "2018-06": 2,
+      "2018-09": 3,
+      "2018-10": 2,
+      "2018-11": 1,
+      "2019-03": 2,
+      "2019-04": 5,
+      "2019-05": 1,
+      "2019-06": 3,
+      "2019-07": 1,
+      "2019-08": 3,
+      "2019-09": 1,
+      "2019-11": 3,
+      "2019-12": 1,
+      "2020-01": 1,
+      "2020-05": 1,
+      "2020-10": 2
+    },
+    "events_after_cleaning": 40
+  },
+  "mapped_districts": [
+    "Morigaon",
+    "Nagaon"
+  ],
+  "outcome_window": [
+    "2019-07-01",
+    "2019-09-07"
+  ],
+  "district_results": [
+    {
+      "design": "district",
+      "method": "Clearwell index (top-decile mean)",
+      "outcome": "outbreaks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "Clearwell index (top-decile mean)",
+      "outcome": "outbreak_weeks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "Clearwell index (mean)",
+      "outcome": "outbreaks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "Clearwell index (mean)",
+      "outcome": "outbreak_weeks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B1 flooded area (top-decile mean)",
+      "outcome": "outbreaks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B1 flooded area (top-decile mean)",
+      "outcome": "outbreak_weeks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B1 flooded area (mean)",
+      "outcome": "outbreaks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B1 flooded area (mean)",
+      "outcome": "outbreak_weeks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B3 people in flooded area (top-decile mean)",
+      "outcome": "outbreaks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B3 people in flooded area (top-decile mean)",
+      "outcome": "outbreak_weeks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B3 people in flooded area (mean)",
+      "outcome": "outbreaks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B3 people in flooded area (mean)",
+      "outcome": "outbreak_weeks",
+      "n": 2,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B2 rainfall (mean of report rows)",
+      "outcome": "outbreaks",
+      "n": 1,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    },
+    {
+      "design": "district",
+      "method": "B2 rainfall (mean of report rows)",
+      "outcome": "outbreak_weeks",
+      "n": 1,
+      "rho": NaN,
+      "p_value": NaN,
+      "ci_low": NaN,
+      "ci_high": NaN,
+      "n_valid_bootstrap": 0,
+      "permutation": "",
+      "note": "fewer than 3 districts: correlation not computable"
+    }
+  ],
+  "district_week_results": [
+    {
+      "design": "district-week",
+      "method": "index_top_decile",
+      "n_rows": 14,
+      "n_positive": 3,
+      "auc": 0.7272727272727273,
+      "spearman": 0.33994470682450245
+    },
+    {
+      "design": "district-week",
+      "method": "B1_flooded_km2",
+      "n_rows": 14,
+      "n_positive": 3,
+      "auc": 0.2727272727272727,
+      "spearman": -0.33994470682450245
+    },
+    {
+      "design": "district-week",
+      "method": "B3_exposed_pop",
+      "n_rows": 14,
+      "n_positive": 3,
+      "auc": 0.2727272727272727,
+      "spearman": -0.33994470682450245
+    }
+  ],
+  "learned_model": {
+    "status": "NOT RUN",
+    "reason": "config.RUN_LEARNED_MODEL is False"
+  },
+  "warnings": [],
+  "limitations": [
+    "Only 2 district(s) were flood-mapped, so the district-level Spearman correlations have n = 2. With n this small the statistical power is very low and the results are indicative only; a permutation p-value cannot be small with so few districts.",
+    "IDSP lists reported outbreaks only. Weeks without a report were set to zero, which assumes complete reporting inside the file's date coverage (2018-03-10 to 2020-10-28).",
+    "Outbreaks depend on many things besides flooding (sanitation, reporting effort, population), and the outcome window is fixed in config.py.",
+    "Weather in the file is a single-point value per report row, so rainfall exists only for districts and weeks that had an outbreak (the B2 baseline is biased towards outbreaks).",
+    "1 district spelling(s) in the file could not be matched (see results/idsp_district_mapping.csv).",
+    "The index weights were fixed in config.py before looking at outbreak data."
+  ],
+  "generated_at": "2026-11-15T12:49:32.392454"
+}
