@@ -78,8 +78,8 @@
       "status": "OK",
       "reason": "",
       "warnings": [],
-      "runtime_s": 3.6,
-      "finished_at": "2026-11-15T12:49:31",
+      "runtime_s": 2.2,
+      "finished_at": "2026-11-15T13:09:33",
       "smoke": false
     },
     "validate": {

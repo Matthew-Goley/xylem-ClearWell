@@ -1,16 +1,22 @@
 """
-Checks on the Model 2 risk ranking. Read-only on existing results; writes new files only.
+Checks on the Model 2 risk ranking. Read-only on existing inputs; writes only its own reports.
 
-  1. Case check: where do the IDSP outbreak villages Sibir and Goriabori
-     (Morigaon, after the July 2019 flood) sit in the ranking? Exact, then fuzzy
-     name match against the 110 OSM units; if no match, one Nominatim lookup per
-     name restricted to Morigaon, then the containing or nearest unit.
-  2. Sensitivity of the ranking to the weights   -> results/risk_sensitivity.md
+  1. Case check: IDSP outbreak villages read from case_points.csv
+     (name, district, lat, lon, cases, onset, coord_source). Add a row, or fill in
+     lat/lon, to check another village; no code change needed. For each row:
+       - exact, then fuzzy, name match against the 110 OSM units;
+       - if lat/lon are given: a unit built the same way as build_villages.py
+         (a 1.5 km circle around the point, clipped to its district), with
+         flooded fraction, duration and exposed people from the same flood rasters
+         and WorldPop clip, and a cross-check of the flooded fraction against
+         outputs/flood_extent.tif; where that flooded fraction would rank among
+         the 110 units; the risk score and rank of that unit if it were added as a
+         111th unit (default weights and flooded-fraction-only); the nearest OSM
+         unit and its distance.
+  2. Sensitivity of the ranking to the weights    -> results/risk_sensitivity.md
   3. District comparison, index vs simple baselines
-  4. Top-15 table                                  -> results/monday_table.md
-  Items 1, 3 and the summary                       -> results/risk_checks.md
-  Raw geocoder replies are cached in results/risk_checks_geocode.json so a rerun
-  does not query Nominatim again.
+  4. Top-15 table                                   -> results/monday_table.md
+  Items 1, 3, the v1 comparison and the summary     -> results/risk_checks.md
 
 The default weights in config.RISK_WEIGHTS are not changed; alternative weight
 sets are passed to risk_score.full_ranking as arguments.
@@ -20,40 +26,36 @@ Run: python risk_checks.py
 import json
 import math
 import re
-import time
 from datetime import datetime
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import requests
+import rasterio
 from rapidfuzz import fuzz, process
 from shapely.geometry import Point
 
+import build_villages as bv
+import common
 import config
 import risk_score
 
-CASES = [
-    {"name": "Sibir", "district": "Morigaon", "cases": 31, "onset": "2019-07-25"},
-    {"name": "Goriabori", "district": "Morigaon", "cases": 16, "onset": "2019-08-30"},
-]
-NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-USER_AGENT = "ClearWell-risk-checks/1.0 (research script, one request per name)"
+CASE_FILE = "case_points.csv"
 TOP_K = 20
-# Written after reading the numbers of the first run; recheck against the tables if inputs change.
+# Written after reading the numbers of the run; recheck against the tables if inputs change.
 SUMMARY = [
-    "1. Flooding drives the order: every weight variant keeps Spearman >= 0.95 and 16-19 of the default top 20, "
-    "though part of that agreement is the 27 unflooded units that sit at the bottom in every version.",
-    "2. The all-Morigaon top 10 is fragile: it comes from the district-level well-reliance figure, a flat bonus "
-    "for all 16 Morigaon units; without it Morigaon has 4 of the top 10 and three Nagaon units move to ranks 1-3.",
-    "3. Morigaon does flood more on average (22% vs 6% of unit area, higher means on both baselines), but the most "
-    "flooded Nagaon units are about as flooded as Morigaon's; two districts, no statistical test.",
-    "4. Duration adds little: it can only be 0, 18 or 36 days, all top 15 are at 36, and dropping it barely moves "
-    "the ranking.",
-    "5. The case check could not be done: neither Sibir nor Goriabori matches a unit name and Nominatim found "
-    "neither in Morigaon, so the ranking is untested against these two outbreaks.",
-    "6. Read it as a reasonable ordering of one season's flood exposure across 110 OSM proxies, not as a validated "
-    "predictor of where outbreaks happen.",
+    "1. Well reliance now adds about 1 point to Morigaon units instead of 15, so Morigaon holds 5 of the top 10 "
+    "instead of 10; Kakati Gaon and Basundhari (Nagaon) are now ranks 1-2 and Bhaktagaon is 3.",
+    "2. Most of the ordering did not change: Spearman 0.990 with the v1 ranking and 18 of the top 20 are the same "
+    "units; flooded fraction still drives it.",
+    "3. With the district gap shrunk to 0.07, well reliance barely matters any more: the index is almost identical "
+    "to its no-well-reliance version (Spearman 0.9997, same top 20).",
+    "4. Morigaon still scores higher on average (74 vs 46) because it flooded more, as the flood-only and "
+    "population-only baselines also show; top-decile means are close (84 vs 80). Two districts, no test.",
+    "5. Goriabori, scored as a unit around its point, is 15.5% flooded and ranks about 25 of 111 (13 of 17 in "
+    "Morigaon), upper-middle, not top; flood-only gives rank 24, the same answer. No OSM unit lies within 4 km.",
+    "6. That is one case with approximate coordinates and an outbreak 20 days after the last radar pass; it says "
+    "nothing about predictive skill. Sibir is unchecked until it has coordinates.",
 ]
 
 
@@ -71,15 +73,18 @@ def rank_with(df, meta, weights):
     return ranked.set_index("unit_id")
 
 
+def only(comp):
+    return {**{k: 0.0 for k in config.RISK_WEIGHTS}, comp: 1.0}
+
+
 def scenarios():
     base = dict(config.RISK_WEIGHTS)
-    zero = {k: 0.0 for k in base}
     return {
         "default": base,
         "(a) no well reliance": {**base, "well_reliance": 0.0},
         "(b) equal weights": {k: 1.0 for k in base},
         "(c) no duration": {**base, "duration": 0.0},
-        "(d) flooded fraction only": {**zero, "exposure": 1.0},
+        "(d) flooded fraction only": only("exposure"),
     }
 
 
@@ -87,9 +92,14 @@ def norm(s):
     return re.sub(r"[^a-z]", "", str(s).lower())
 
 
+def label(name, uid):
+    return str(name) if isinstance(name, str) and name.strip() else f"(unnamed, {uid})"
+
+
 # ---------------------------------------------------------------- 1. cases
 def name_match(target, ranked):
     names = ranked["name"].dropna()
+    names = names[names.astype(str).str.strip() != ""]
     exact = names[names.map(norm) == norm(target)]
     if len(exact):
         return "exact", exact.index[0], 100.0, []
@@ -101,68 +111,98 @@ def name_match(target, ranked):
     return None, None, None, cands
 
 
-def geocode(name, district_geom_ll, cache):
-    if name in cache:
-        return cache[name], True
-    minx, miny, maxx, maxy = district_geom_ll.bounds
-    params = {"q": f"{name}, Morigaon, Assam, India", "format": "jsonv2", "limit": 5,
-              "countrycodes": "in", "viewbox": f"{minx},{maxy},{maxx},{miny}", "bounded": 1}
-    try:
-        r = requests.get(NOMINATIM_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=30)
-        r.raise_for_status()
-        reply = {"ok": True, "results": r.json(), "queried_at": datetime.now().isoformat()}
-    except Exception as err:  # noqa: BLE001
-        reply = {"ok": False, "error": f"{type(err).__name__}: {err}", "queried_at": datetime.now().isoformat()}
-    cache[name] = reply
-    time.sleep(1.1)  # Nominatim policy: at most 1 request per second
-    return reply, False
+def worldpop_clip(paths, aoi):
+    """The cached WorldPop clip build_villages.py used (never downloads)."""
+    manual = paths.manual / "worldpop.tif"
+    if manual.exists():
+        return manual
+    clip = paths.cache / "worldpop" / f"worldpop_aoi_{bv.bbox_key(aoi['bbox_lonlat'])}.tif"
+    if not clip.exists():
+        raise RuntimeError(f"WorldPop clip {clip} not found; run stage villages first")
+    return clip
 
 
-def case_check(paths, ranked, units, districts):
+def point_unit_features(paths, aoi, geom, district, df):
+    """Features for one unit geometry, computed exactly like build_villages.run_villages."""
+    crs, transform, width, height = common.aoi_grid(aoi)
+    unit = gpd.GeoDataFrame({"unit_id": ["point"]}, geometry=[geom], crs=crs)
+    unit_idx = bv.unit_index_raster(unit, transform, width, height)
+    x, y, pop = bv.population_points(worldpop_clip(paths, aoi), aoi)
+    r, c, inside = bv.points_to_pixels(x, y, transform, width, height)
+    pop_pixels = (r[inside], c[inside], pop[inside], unit_idx[r[inside], c[inside]])
+    feats = bv.flood_features(paths, aoi, unit_idx, 1, pop_pixels, None).iloc[0].to_dict()
+    feats["pop"] = float(pop_pixels[2][pop_pixels[3] == 1].sum())
+    with rasterio.open(paths.outputs / "dem_on_grid.tif") as src:
+        dem = src.read(1).astype(np.float32)
+    ok = np.isfinite(dem) & (unit_idx == 1)
+    feats["elev_mean_m"] = float(dem[ok].mean()) if ok.any() else np.nan
+    del dem
+    with rasterio.open(paths.outputs / "flood_extent.tif") as src:
+        ext = src.read(1)
+    inside_u = unit_idx == 1
+    obs = inside_u & (ext != 255)
+    feats["extent_check_frac"] = float((inside_u & (ext == 1)).sum() / max(obs.sum(), 1))
+    feats["observed_share"] = float(obs.sum() / max(inside_u.sum(), 1))
+    feats["district"] = district
+    feats["pct_shallow_well_handpump"] = float(df.loc[df["district"] == district,
+                                                      "pct_shallow_well_handpump"].iloc[0])
+    feats["area_km2"] = geom.area / 1e6
+    return feats
+
+
+def rank_with_extra(df, meta, extra, weights):
+    """Add the point unit as a 111th unit (elev_pctile recomputed within district) and rank."""
+    row = {c: extra.get(c, np.nan) for c in df.columns}
+    row.update(unit_id="__case_point__", name="(case point)", district=extra["district"])
+    df2 = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    df2["elev_pctile"] = df2.groupby("district")["elev_mean_m"].rank(pct=True)
+    r = rank_with(df2, meta, weights)
+    p = r.loc["__case_point__"]
+    in_d = r[r["district"] == extra["district"]].sort_values("rank")
+    return {"rank": int(p["rank"]), "n": len(r), "score": float(p["score"]),
+            "district_rank": int(list(in_d.index).index("__case_point__")) + 1, "district_n": len(in_d)}
+
+
+def case_check(paths, aoi, df, meta, ranked, units, districts):
+    cases = pd.read_csv(paths.root / CASE_FILE, dtype={"lat": float, "lon": float})
     n = len(ranked)
-    mori = ranked[ranked["district"] == "Morigaon"].sort_values("rank")
-    mori_rank = {uid: i + 1 for i, uid in enumerate(mori.index)}
-    cache_path = paths.results / "risk_checks_geocode.json"
-    cache = json.loads(cache_path.read_text()) if cache_path.exists() else {}
-    dist_ll = districts.to_crs(4326).set_index("district")
-    mori_utm = districts.set_index("district").loc["Morigaon", "geometry"]
-    rows = []
-    for case in CASES:
-        row = {**case}
+    out = []
+    for case in cases.to_dict("records"):
+        row = {k: (None if isinstance(v, float) and math.isnan(v) else v) for k, v in case.items()}
         how, uid, score, cands = name_match(case["name"], ranked)
-        row["name_candidates"] = cands
-        if how:
-            row.update(method=f"{how} name match (score {score:.0f})", unit_id=uid, distance_m=0.0)
-        else:
-            reply, cached = geocode(case["name"], dist_ll.loc["Morigaon", "geometry"], cache)
-            row["geocode_cached"] = cached
-            hits = reply.get("results", []) if reply.get("ok") else []
-            if not reply.get("ok"):
-                row.update(method="geocoding FAILED", reason=reply["error"])
-            elif not hits:
-                row.update(method="geocoding FAILED", reason="Nominatim returned no result inside Morigaon")
-            else:
-                hit = hits[0]
-                pt = gpd.GeoSeries([Point(float(hit["lon"]), float(hit["lat"]))], crs=4326).to_crs(units.crs)[0]
-                d_poly = units.geometry.distance(pt)
-                best = d_poly.idxmin()
-                row.update(method="geocoded (Nominatim), then containing/nearest unit",
-                           geocode_name=hit.get("display_name"), geocode_type=f"{hit.get('category', '')}/{hit.get('type', '')}",
-                           lon=float(hit["lon"]), lat=float(hit["lat"]), n_hits=len(hits),
-                           in_morigaon_polygon=bool(mori_utm.contains(pt)),
-                           unit_id=units.loc[best, "unit_id"], distance_m=float(d_poly[best]),
-                           contains=bool(d_poly[best] == 0),
-                           dist_to_unit_point_m=float(units.loc[best].geometry.centroid.distance(pt)))
-        if row.get("unit_id"):
-            u = ranked.loc[row["unit_id"]]
-            r = int(u["rank"])
-            row.update(unit_name=u["name"], unit_district=u["district"], rank=r,
-                       percentile=100 * (n - r) / (n - 1), score=float(u["score"]),
-                       morigaon_rank=mori_rank.get(row["unit_id"]), morigaon_n=len(mori),
-                       flooded_frac=float(u["flooded_frac"]), max_duration_days=float(u["max_duration_days"]))
-        rows.append(row)
-    cache_path.write_text(json.dumps(cache, indent=2), encoding="utf-8")
-    return rows
+        row["name_match"] = f"{how} match to {ranked.loc[uid, 'name']} (score {score:.0f})" if how else \
+            "no name match (" + ", ".join(f"{a} {b}" for a, b in cands) + f"; threshold {config.FUZZY_MATCH_MIN_SCORE})"
+        if row["lat"] is None or row["lon"] is None:
+            row["status"] = f"no coordinates yet: add lat/lon to {CASE_FILE}"
+            out.append(row)
+            continue
+        pt = gpd.GeoSeries([Point(row["lon"], row["lat"])], crs=4326).to_crs(units.crs)[0]
+        hit = districts[districts.contains(pt)]
+        if hit.empty:
+            row["status"] = "point is outside the study districts"
+            out.append(row)
+            continue
+        dname = hit.iloc[0]["district"]
+        row["point_district"] = dname
+        geom = pt.buffer(config.VILLAGE_MAX_RADIUS_M).intersection(hit.iloc[0].geometry)
+        f = point_unit_features(paths, aoi, geom, dname, df)
+        row["feat"] = f
+        row["flood_rank_among_110"] = int((ranked["flooded_frac"] > f["flooded_frac"]).sum()) + 1
+        row["n_units"] = n
+        row["as_unit_default"] = rank_with_extra(df, meta, f, config.RISK_WEIGHTS)
+        row["as_unit_floodonly"] = rank_with_extra(df, meta, f, only("exposure"))
+        d = units.geometry.distance(pt)
+        j = d.idxmin()
+        nu = units.loc[j]
+        row["nearest"] = {"unit_id": nu["unit_id"], "name": label(nu["name"], nu["unit_id"]),
+                          "district": nu["district"], "edge_m": float(d[j]),
+                          "centre_m": float(nu.geometry.centroid.distance(pt)),
+                          "rank": int(ranked.loc[nu["unit_id"], "rank"]),
+                          "score": float(ranked.loc[nu["unit_id"], "score"]),
+                          "flooded_frac": float(ranked.loc[nu["unit_id"], "flooded_frac"])}
+        row["status"] = "done"
+        out.append(row)
+    return out
 
 
 # ---------------------------------------------------------- 2. sensitivity
@@ -170,44 +210,55 @@ def sensitivity(df, meta):
     sc = scenarios()
     ranks = {k: rank_with(df, meta, w) for k, w in sc.items()}
     base = ranks["default"]
-    base_top = set(base.index[base["rank"] <= TOP_K])
-    out = []
-    for k, r in ranks.items():
-        r = r.reindex(base.index)
-        top10 = r[r["rank"] <= 10]
-        out.append({"scenario": k,
-                    "weights": {c: round(v / sum(sc[k].values()), 3) for c, v in sc[k].items() if v},
-                    "spearman": float(base["rank"].corr(r["rank"], method="spearman")),
-                    "top20_overlap": len(base_top & set(r.index[r["rank"] <= TOP_K])),
-                    "top10_morigaon": int((top10["district"] == "Morigaon").sum())})
+    out = [compare(base, r, k, sc[k]) for k, r in ranks.items()]
     return out, ranks
+
+
+def compare(base, r, name, weights=None):
+    r = r.reindex(base.index)
+    base_top = set(base.index[base["rank"] <= TOP_K])
+    top10 = r[r["rank"] <= 10]
+    res = {"scenario": name,
+           "spearman": float(base["rank"].corr(r["rank"], method="spearman")),
+           "top20_overlap": len(base_top & set(r.index[r["rank"] <= TOP_K])),
+           "top10_morigaon": int((top10["district"] == "Morigaon").sum())}
+    if weights:
+        res["weights"] = {c: round(v / sum(weights.values()), 3) for c, v in weights.items() if v}
+    return res
 
 
 # ------------------------------------------------------- 3. district means
 def district_table(df, meta):
     sets = {"Full index (default weights)": config.RISK_WEIGHTS,
-            "Flooded area only (flooded_frac)": {**{k: 0.0 for k in config.RISK_WEIGHTS}, "exposure": 1.0},
-            "Exposed population only (exposed_pop)": {**{k: 0.0 for k in config.RISK_WEIGHTS}, "exposed_people": 1.0}}
+            "Flooded area only (flooded_frac)": only("exposure"),
+            "Exposed population only (exposed_pop)": only("exposed_people")}
     rows = []
-    for label, w in sets.items():
+    for lab, w in sets.items():
         r = rank_with(df, meta, w)
         for d, g in r.groupby("district"):
             k = max(1, math.ceil(0.1 * len(g)))
-            rows.append({"score": label, "district": d, "n": len(g), "mean": g["score"].mean(),
+            rows.append({"score": lab, "district": d, "n": len(g), "mean": g["score"].mean(),
                          "top_decile_k": k, "top_decile_mean": g["score"].nlargest(k).mean()})
     return pd.DataFrame(rows)
 
 
 # ------------------------------------------------------------------ write
-def label(name, uid):
-    return str(name) if isinstance(name, str) and name.strip() else f"(unnamed, {uid})"
+def well_note():
+    if config.WELL_RELIANCE_SCORING == "absolute":
+        return ("- well_reliance is a district-level Census value (Morigaon 92.1%, Nagaon 85.4%), used on an "
+                "absolute scale (pct / 100, config.WELL_RELIANCE_SCORING = \"absolute\"): 0.921 vs 0.854, so at "
+                "weight 0.15 it adds about 1 score point in Morigaon's favour. Before 2026-11-15 it was "
+                "percentile-ranked (1.0 vs 0.0); see results/risk_sensitivity_v1.md.")
+    return ("- well_reliance is a district-level Census value, percentile-ranked "
+            "(config.WELL_RELIANCE_SCORING = \"percentile\"): 1.0 for every Morigaon unit, 0.0 for every Nagaon "
+            "unit, a flat district bonus.")
 
 
 def write_sensitivity(paths, sens, ranks):
     lines = ["# Risk ranking sensitivity to the weights", "",
              f"Generated by risk_checks.py on {datetime.now():%Y-%m-%d %H:%M}. 110 village proxies "
-             "(16 Morigaon, 94 Nagaon). Same components and percentile scoring as risk_score.py; only "
-             "the weights change. The default weights in config.py are untouched.", "",
+             "(16 Morigaon, 94 Nagaon). Same components and scoring as risk_score.py "
+             f"(well reliance scored \"{config.WELL_RELIANCE_SCORING}\"); only the weights change.", "",
              "| Scenario | Weights (renormalized) | Spearman vs default | Top-20 overlap with default | "
              "Morigaon units in top 10 |", "|---|---|---|---|---|"]
     for s in sens:
@@ -219,10 +270,7 @@ def write_sensitivity(paths, sens, ranks):
         top = r.sort_values("rank").head(10)
         lines.append(f"- **{k}**: " + "; ".join(f"{int(x['rank'])}. {label(x['name'], uid)} ({x['district'][0]})"
                                                 for uid, x in top.iterrows()))
-    lines += ["", "## Notes", "",
-              "- well_reliance is a district-level Census value (Morigaon 92.1%, Nagaon 85.4%), the same for "
-              "every unit in a district. Its percentile is 1.0 for every Morigaon unit and 0.0 for every "
-              "Nagaon unit, so it works as a flat bonus for Morigaon rather than a village signal.",
+    lines += ["", "## Notes", "", well_note(),
               "- duration has only three values (0, 18, 36 days) because there are two flood passes and the "
               "resolution is one revisit interval; many units tie.",
               "- One flood season, one AOI. These numbers say how much the ordering depends on the weight "
@@ -234,8 +282,8 @@ def write_monday(paths, base, no_well):
     top = base.sort_values("rank").head(15)
     lines = ["# Top 15 village proxies, Clearwell risk index", "",
              f"Generated by risk_checks.py on {datetime.now():%Y-%m-%d %H:%M} from the default ranking "
-             "(same as results/village_risk_ranked.csv). Units are OSM-based village proxies (Voronoi cells "
-             "clipped to 1.5 km), not census villages.", "",
+             f"(same as results/village_risk_ranked.csv; well reliance scored \"{config.WELL_RELIANCE_SCORING}\"). "
+             "Units are OSM-based village proxies (Voronoi cells clipped to 1.5 km), not census villages.", "",
              "| Rank | Village proxy | District | Score (0-100) | Area flooded | People in flooded area (est.) | "
              "Flood duration (est.) | Rank without well reliance |", "|---|---|---|---|---|---|---|---|"]
     for uid, x in top.iterrows():
@@ -248,73 +296,110 @@ def write_monday(paths, base, no_well):
               "- Duration: longest run of consecutive flooded passes plus one revisit interval, so it can only "
               "be 0, 18 or 36 days here (two flood passes). Coarse.",
               "- Rank without well reliance: the same index with the district-level well-reliance component "
-              "removed (see results/risk_sensitivity.md)."]
+              "removed (see results/risk_sensitivity.md).",
+              "- Previous version (well reliance percentile-ranked): results/monday_table_v1.md."]
     (paths.results / "monday_table.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def write_checks(paths, cases, dist, sens, summary):
-    lines = ["# Risk ranking checks", "", f"Generated by risk_checks.py on {datetime.now():%Y-%m-%d %H:%M}.", "",
-             "## 1. Case check: IDSP outbreak villages", "",
-             "Percentile = share of the other 109 units ranked below it (100 = top).", ""]
+def case_lines(cases):
+    lines = ["## 1. Case check: IDSP outbreak villages", "",
+             "**An outbreak at a known location is a case check, not a statistical test.** One or two "
+             "villages cannot show that the index predicts outbreaks, and a flooded-area-only ranking is "
+             "reported next to each result because it gives the same answer.", "",
+             f"Points come from `{CASE_FILE}`. A unit is built around each point the same way as the OSM units "
+             f"(a {config.VILLAGE_MAX_RADIUS_M} m circle clipped to the district; unlike the OSM units it is not "
+             "cut by neighbouring Voronoi cells). Its rank is what it would get as a 111th unit.", ""]
     for c in cases:
-        lines.append(f"### {c['name']} ({c['district']}; {c['cases']} cases from {c['onset']})")
-        lines.append("")
-        lines.append(f"- Fuzzy name candidates among the 110 units: "
-                     + ", ".join(f"{n} ({s})" for n, s in c["name_candidates"]) + " (none passed the "
-                     f"{config.FUZZY_MATCH_MIN_SCORE} threshold)" if c["method"].startswith("geocod") else
-                     f"- Name match: {c['method']}")
-        lines.append(f"- Method: {c['method']}" + (" (cached reply reused)" if c.get("geocode_cached") else ""))
-        if "reason" in c:
-            lines += [f"- **Not located:** {c['reason']}. No rank reported.", ""]
+        lines += [f"### {c['name']} ({c['district']}; {c['cases']} cases from {c['onset']})", "",
+                  f"- Name: {c['name_match']}."]
+        if c["status"] != "done":
+            lines += [f"- **Not checked:** {c['status']}.", ""]
             continue
-        if "geocode_name" in c:
-            lines.append(f"- Geocoded to: {c['geocode_name']} [{c['geocode_type']}] at {c['lat']:.5f}, "
-                         f"{c['lon']:.5f} ({c['n_hits']} hit(s); first used). Inside Morigaon polygon: "
-                         f"{c['in_morigaon_polygon']}.")
-            where = "inside" if c["contains"] else f"{c['distance_m']:,.0f} m from the edge of"
-            lines.append(f"- Point is {where} unit {c['unit_name'] if isinstance(c['unit_name'], str) else '(unnamed)'} "
-                         f"({c['unit_id']}, {c['unit_district']}); {c['dist_to_unit_point_m']:,.0f} m from that "
-                         "unit's centre.")
-        lines.append(f"- Rank **{c['rank']} / 110** (percentile {c['percentile']:.0f}), score {c['score']:.1f}; "
-                     f"rank in Morigaon **{c['morigaon_rank']} / {c['morigaon_n']}**. Unit flooded fraction "
-                     f"{100 * c['flooded_frac']:.0f}%, duration {int(c['max_duration_days'])} days.")
-        lines.append("")
-    lines += ["Caveat: two cases, both in Morigaon, where every unit gets the well-reliance bonus. A nearest-unit "
-              "match far from the point says little about the village itself.", "",
-              "## 2. Sensitivity", "", "See results/risk_sensitivity.md. Summary:", "",
+        f, a, b, nu = c["feat"], c["as_unit_default"], c["as_unit_floodonly"], c["nearest"]
+        lines += [
+            f"- Point {c['lat']:.6f}, {c['lon']:.6f} ({c['coord_source']}), inside {c['point_district']}.",
+            f"- Within {config.VILLAGE_MAX_RADIUS_M} m: flooded fraction **{100 * f['flooded_frac']:.1f}%** of "
+            f"observed land (cross-check from flood_extent.tif: {100 * f['extent_check_frac']:.1f}%; "
+            f"{100 * f['observed_share']:.0f}% of the circle observed); estimated people in the flooded area "
+            f"**~{int(round(f['exposed_pop'], -1)):,}** of ~{int(round(f['pop'], -1)):,} (WorldPop); "
+            f"duration {int(f['max_duration_days'])} days; first flooded {_ffd(f)}.",
+            f"- That flooded fraction would rank **{c['flood_rank_among_110']} of {c['n_units'] + 1}** "
+            f"(above {c['n_units'] - c['flood_rank_among_110'] + 1} of the 110 units).",
+            f"- As a 111th unit: risk score **{a['score']:.1f}**, rank **{a['rank']} / {a['n']}** "
+            f"({a['district_rank']} / {a['district_n']} in {c['point_district']}). Flooded-fraction-only "
+            f"ranking: rank {b['rank']} / {b['n']} ({b['district_rank']} / {b['district_n']} in "
+            f"{c['point_district']}).",
+            f"- Nearest OSM unit: {nu['name']} ({nu['unit_id']}, {nu['district']}), "
+            + ("point is inside it" if nu["edge_m"] == 0 else f"{nu['edge_m']:,.0f} m from its edge")
+            + f", {nu['centre_m']:,.0f} m from its centre; rank {nu['rank']}, score {nu['score']:.1f}, "
+              f"flooded {100 * nu['flooded_frac']:.0f}%.", ""]
+    return lines
+
+
+def _ffd(f):
+    for k in sorted(k for k in f if k.startswith("flooded_frac_")):
+        if f[k] >= 0.01:
+            d = k.split("_")[-1]
+            return f"{d[:4]}-{d[4:6]}-{d[6:]}"
+    return "never (>= 1%)"
+
+
+def write_checks(paths, cases, dist, sens, v1cmp):
+    lines = ["# Risk ranking checks", "", f"Generated by risk_checks.py on {datetime.now():%Y-%m-%d %H:%M}. "
+             f"Well reliance scored \"{config.WELL_RELIANCE_SCORING}\". Previous version: "
+             "results/risk_checks_v1.md.", ""]
+    lines += case_lines(cases)
+    lines += ["## 2. Sensitivity", "", "See results/risk_sensitivity.md. Summary:", "",
               "| Scenario | Spearman | Top-20 overlap | Morigaon in top 10 |", "|---|---|---|---|"]
     lines += [f"| {s['scenario']} | {s['spearman']:.3f} | {s['top20_overlap']}/20 | {s['top10_morigaon']}/10 |"
               for s in sens]
+    if v1cmp:
+        lines += ["", "Current default vs the v1 default (well reliance percentile-ranked, "
+                  "results/village_risk_ranked_v1.csv):", "",
+                  "| Comparison | Spearman | Top-20 overlap | Morigaon in top 10 |", "|---|---|---|---|"]
+        lines += [f"| {s['scenario']} | {s['spearman']:.3f} | {s['top20_overlap']}/20 | {s['top10_morigaon']}/10 |"
+                  for s in v1cmp]
     lines += ["", "## 3. District comparison", "",
               "**Two districts only (16 vs 94 units). This is a description, not a statistical test.** "
-              "Scores are 0-100 percentile-based within each scoring; top decile = top ceil(10%) units in the "
-              "district (2 in Morigaon, 10 in Nagaon).", "",
+              "Scores are 0-100; top decile = top ceil(10%) units in the district (2 in Morigaon, 10 in Nagaon).", "",
               "| Score | District | Units | Mean score | Top-decile mean |", "|---|---|---|---|---|"]
     lines += [f"| {r.score} | {r.district} | {r.n} | {r.mean:.1f} | {r.top_decile_mean:.1f} (top {r.top_decile_k}) |"
               for r in dist.itertuples()]
-    lines += ["", "## Summary", ""] + summary
+    lines += ["", "## Summary", ""] + SUMMARY
     (paths.results / "risk_checks.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def v1_comparison(paths, base):
+    p = paths.results / "village_risk_ranked_v1.csv"
+    if not p.exists():
+        return []
+    v1 = pd.read_csv(p, comment="#").set_index("unit_id")
+    return [compare(v1, v1, "v1 default (percentile well reliance)"),
+            compare(v1, base, "current default vs v1")]
 
 
 def main():
     paths, df, meta, published = load()
+    aoi = common.load_aoi(paths)
     base = rank_with(df, meta, config.RISK_WEIGHTS)
     pub = published.set_index("unit_id")["rank"]
     if not (base["rank"].reindex(pub.index) == pub).all():
-        raise RuntimeError("recomputed default ranking differs from results/village_risk_ranked.csv")
+        raise RuntimeError("recomputed default ranking differs from results/village_risk_ranked.csv "
+                           "(re-run the risk stage first)")
     units = gpd.read_file(paths.outputs / "villages.gpkg").reset_index(drop=True)
-    districts = gpd.read_file(paths.outputs / "aoi_districts.gpkg")
+    districts = common.districts_for_aoi(paths, aoi)
 
-    cases = case_check(paths, base, units, districts)
+    cases = case_check(paths, aoi, df, meta, base, units, districts)
     sens, ranks = sensitivity(df, meta)
     dist = district_table(df, meta)
+    v1cmp = v1_comparison(paths, base)
     write_sensitivity(paths, sens, ranks)
     write_monday(paths, base, ranks["(a) no well reliance"])
+    write_checks(paths, cases, dist, sens, v1cmp)
 
     print(json.dumps(cases, indent=2, default=str))
-    print(json.dumps(sens, indent=2))
+    print(json.dumps(sens + v1cmp, indent=2))
     print(dist.to_string())
-    write_checks(paths, cases, dist, sens, SUMMARY)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,10 @@ advance in config.RISK_WEIGHTS (never tuned on outcomes):
     low_elevation   1 - elev_pctile
 
 Each component is turned into a percentile rank (0 to 1) across all units;
-ties share the lowest rank, so units with zero flooding get 0. Unavailable
+ties share the lowest rank, so units with zero flooding get 0. Exception:
+well_reliance is a district-level percentage, so by default it is used on an
+absolute scale (pct / 100); config.WELL_RELIANCE_SCORING = "percentile" restores
+the old rank-based behaviour. Unavailable
 components are dropped and the remaining weights renormalized. If a unit is
 missing one value, its weights are renormalized over the values it has.
 Score = weighted sum x 100.
@@ -88,7 +91,13 @@ def score_units(raw, weights):
     """
     comps = pd.DataFrame(index=raw.index)
     for comp in raw.columns:
-        comps[f"c_{comp}"] = pct_rank(raw[comp]).values
+        if comp == "well_reliance" and config.WELL_RELIANCE_SCORING == "absolute":
+            comps[f"c_{comp}"] = (raw[comp].astype(float) / 100.0).clip(0, 1).values
+        elif comp == "well_reliance" and config.WELL_RELIANCE_SCORING != "percentile":
+            raise ValueError(f"WELL_RELIANCE_SCORING must be 'absolute' or 'percentile', "
+                             f"not {config.WELL_RELIANCE_SCORING!r}")
+        else:
+            comps[f"c_{comp}"] = pct_rank(raw[comp]).values
     w = {k: weights[k] for k in raw.columns}
     total = sum(w.values())
     w = {k: v / total for k, v in w.items()}

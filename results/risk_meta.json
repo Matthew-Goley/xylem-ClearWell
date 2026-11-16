@@ -60,5 +60,5 @@
   ],
   "unit_source": "OSM place=village/hamlet Voronoi cells clipped to district and 1500 m radius (110 points)",
   "smoke": false,
-  "generated_at": "2026-11-15T12:49:31.658794"
+  "generated_at": "2026-11-15T13:09:33.602643"
 }

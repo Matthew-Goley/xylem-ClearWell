@@ -289,6 +289,10 @@ RISK_WEIGHTS = {
     "well_reliance": 0.15,   # district share of shallow wells / hand pumps
     "low_elevation": 0.10,   # 1 - elev_pctile
 }
+# How the district-level well-reliance value becomes a 0..1 component.
+# "absolute": pct / 100 (default). "percentile": rank across units like the
+# other components (old behaviour; with two districts it is 0 or 1).
+WELL_RELIANCE_SCORING = "absolute"
 TOP_K_MAP = 20
 TOP_K_EVOLUTION = 50
 
