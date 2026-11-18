@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clearwell village flood risk map</title>
+  <meta name="description" content="Prototype map ranking flood-affected villages so district teams can decide where to test drinking water wells first.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#panel">Skip to the ranked list</a>
+
+  <header class="site-header">
+    <div class="title-block">
+      <h1>Clearwell</h1>
+      <p class="tagline">Which villages should be tested first after a flood?</p>
+    </div>
+    <p class="banner" id="banner" role="note">
+      <strong>Prototype.</strong>
+      <span id="banner-event">Loading event details.</span>
+      Not a current alert. Not validated for operational use.
+    </p>
+    <p class="print-only print-meta" id="print-meta"></p>
+  </header>
+
+  <main class="layout">
+    <section class="map-col" aria-label="Map">
+      <div class="map-controls" role="group" aria-label="Map layers">
+        <fieldset class="toggles">
+          <legend class="visually-hidden">Show or hide map layers</legend>
+          <label><input type="checkbox" id="toggle-villages" checked> Villages</label>
+          <label><input type="checkbox" id="toggle-flood" checked> Flood water</label>
+          <label><input type="checkbox" id="toggle-districts" checked> District outlines</label>
+        </fieldset>
+        <div class="flood-ctl">
+          <label for="flood-select">Flood layer</label>
+          <select id="flood-select" aria-label="Which flood layer to show"></select>
+        </div>
+        <div class="flood-ctl">
+          <label for="flood-opacity">Flood opacity <output id="flood-opacity-val" for="flood-opacity">70%</output></label>
+          <input type="range" id="flood-opacity" min="0" max="100" step="5" value="70" aria-label="Flood layer opacity, percent">
+        </div>
+      </div>
+      <div id="map" role="region" aria-label="Map of villages, flood water and district outlines. Use the ranked list for keyboard access to each village."></div>
+    </section>
+
+    <section class="panel" id="panel" aria-label="Information panel" tabindex="-1">
+      <div class="tabs" role="tablist" aria-label="Panel sections">
+        <button role="tab" id="tab-list" aria-controls="pane-list" aria-selected="true">Ranked list</button>
+        <button role="tab" id="tab-read" aria-controls="pane-read" aria-selected="false" tabindex="-1">How to read this</button>
+        <button role="tab" id="tab-acc" aria-controls="pane-acc" aria-selected="false" tabindex="-1">Accuracy and limits</button>
+      </div>
+
+      <!-- Ranked list -->
+      <div class="pane" role="tabpanel" id="pane-list" aria-labelledby="tab-list" tabindex="0">
+        <div class="list-tools">
+          <div class="search">
+            <label for="search">Search village name</label>
+            <input type="search" id="search" autocomplete="off" placeholder="Type a name">
+          </div>
+          <label class="check"><input type="checkbox" id="top20"> Top 20 only</label>
+          <a class="button" id="download-csv" href="data/villages.csv" download="clearwell_villages_ranked.csv">Download CSV</a>
+          <button type="button" class="button secondary" id="print-btn">Print top 20</button>
+        </div>
+        <p class="list-status" id="list-status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table id="rank-table" aria-label="Villages ranked by risk score. Select a row to show the village on the map.">
+            <thead>
+              <tr>
+                <th scope="col" data-key="rank" aria-sort="ascending"><button type="button">Rank</button></th>
+                <th scope="col" data-key="name" aria-sort="none"><button type="button">Village</button></th>
+                <th scope="col" data-key="district" aria-sort="none"><button type="button">District</button></th>
+                <th scope="col" data-key="score" class="num" aria-sort="none"><button type="button">Score</button></th>
+                <th scope="col" data-key="pct_flooded" class="num" aria-sort="none"><button type="button">% flooded</button></th>
+                <th scope="col" data-key="people_est" class="num" aria-sort="none"><button type="button">People (est.)</button></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- How to read this -->
+      <div class="pane prose" role="tabpanel" id="pane-read" aria-labelledby="tab-read" tabindex="0" hidden>
+        <h2>How to read this map</h2>
+
+        <h3>What the satellite sees</h3>
+        <p>The flood map comes from <strong>radar</strong> images taken by the Sentinel-1 satellite. Radar (a sensor that sends out radio waves and measures what bounces back) works through clouds and at night, which matters during the monsoon. Calm water reflects the waves away, so it looks dark. A computer model trained on labelled flood images marks those dark areas as water.</p>
+        <p>The satellite passed over this area on these dates: <span id="read-passes">not available</span>.</p>
+
+        <h3>What "flooded" means here</h3>
+        <p>A place counts as flooded when it had water during the flood but was usually dry in the same weeks of earlier years (<span id="read-normal-years">not available</span>). Rivers, ponds and wetlands that hold water every year are not counted. This also means that <strong>areas that flood every monsoon may be undercounted</strong>.</p>
+        <p>On the map, flood water is drawn in blue squares about <span id="read-pixel">not available</span> across. A square is blue if any part of it was flooded, so thin channels stay visible. This makes the blue area look somewhat larger than the true flooded area.</p>
+
+        <h3>What each village shape is</h3>
+        <p>Each shape is the land within <span id="read-radius">not available</span> of a village point mapped in OpenStreetMap (a free map made by volunteers), and closer to that point than to any other village point. It is <strong>not an official village boundary</strong>. Only villages that someone has added to OpenStreetMap appear.</p>
+
+        <h3>The five parts of the score</h3>
+        <p>Each village gets five numbers. Most are a <strong>percentile</strong> (where the village sits compared with the other villages on this map, from 0 for the lowest to 100 for the highest). They are combined with these weights:</p>
+        <ul id="read-components"><li>not available</li></ul>
+
+        <h3>What the score means</h3>
+        <p>The risk score runs from 0 to 100. It is a <strong>ranking</strong> of how exposed each village was to the flood and how much its people may rely on wells that floods can spoil. A higher score means the village should be looked at sooner.</p>
+        <p>The score is <strong>not a measurement of contamination</strong>. Nobody tested the water to make it. A village with a high score may have safe wells, and a village with a low score may not. Wells should be tested to confirm.</p>
+
+        <h3>How a district team could use it</h3>
+        <ol>
+          <li>Open the Ranked list and tick "Top 20 only".</li>
+          <li>Print it or download the CSV, and check the names against your own village lists. Some names may differ from official spellings, and some villages are unnamed.</li>
+          <li>Send water test kits and chlorine tablets to the top villages first, and test the hand pumps and shallow wells there.</li>
+          <li>Use local knowledge to adjust. Field reports, ASHA worker reports or clinic data should come before this list when they disagree.</li>
+          <li>Work down the list as supplies allow, and record test results so the ranking can be checked later.</li>
+        </ol>
+      </div>
+
+      <!-- Accuracy and limits -->
+      <div class="pane prose" role="tabpanel" id="pane-acc" aria-labelledby="tab-acc" tabindex="0" hidden>
+        <h2>Accuracy and limits</h2>
+
+        <h3>How well the flood detector finds water</h3>
+        <div id="acc-model1"><p>not available</p></div>
+
+        <h3>Check against an optical satellite image</h3>
+        <div id="acc-optical"><p>not available</p></div>
+
+        <h3>Has the ranking been validated?</h3>
+        <div id="acc-validation"><p>not available</p></div>
+        <p id="acc-case">Case check: not available.</p>
+
+        <h3>Limitations</h3>
+        <ul id="acc-limits"><li>not available</li></ul>
+
+        <h3>About this page</h3>
+        <dl class="facts">
+          <dt>Data generated</dt><dd id="acc-generated">not available</dd>
+          <dt>Code version (git commit)</dt><dd id="acc-commit">not available</dd>
+          <dt>Ranking produced</dt><dd id="acc-ranked">not available</dd>
+        </dl>
+
+        <h3>Data sources</h3>
+        <ul class="sources">
+          <li><a href="https://planetarycomputer.microsoft.com/dataset/sentinel-1-rtc" rel="noopener">Sentinel-1 radar via Microsoft Planetary Computer</a></li>
+          <li><a href="https://github.com/cloudtostreet/Sen1Floods11" rel="noopener">Sen1Floods11</a> (labelled flood images used to train the detector)</li>
+          <li><a href="https://www.worldpop.org/" rel="noopener">WorldPop</a> (population estimates)</li>
+          <li><a href="https://sites.research.google/open-buildings/" rel="noopener">Google Open Buildings</a></li>
+          <li><a href="https://planetarycomputer.microsoft.com/dataset/cop-dem-glo-30" rel="noopener">Copernicus DEM</a> (land height)</li>
+          <li><a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> (village points and base map)</li>
+          <li><a href="https://censusindia.gov.in/" rel="noopener">Census of India 2011</a> (drinking water sources)</li>
+          <li><a href="https://idsp.mohfw.gov.in/" rel="noopener">IDSP outbreak reports</a> via <a href="https://arxiv.org/abs/2501.18602" rel="noopener">EpiClim</a></li>
+          <li><a href="https://www.geoboundaries.org/" rel="noopener">geoBoundaries</a> (district outlines)</li>
+          <li><a href="https://planetarycomputer.microsoft.com/dataset/sentinel-2-l2a" rel="noopener">Sentinel-2</a> (optical check)</li>
+        </ul>
+
+        <p class="credit">Built for the Xylem Global Student Innovation Challenge 2026.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Print view: top 20 only -->
+  <section class="print-only" aria-hidden="true">
+    <h2>Top 20 villages by risk score</h2>
+    <table id="print-table">
+      <thead><tr><th>Rank</th><th>Village</th><th>District</th><th>Score</th><th>% flooded</th><th>People in flooded area (est.)</th><th>Flood days (est.)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p>The score ranks flood exposure and well reliance. It is not a measurement of contamination. Test wells to confirm.</p>
+  </section>
+
+  <noscript><p class="noscript">This map needs JavaScript. The ranked list is also available as <a href="data/villages.csv">a CSV file</a>.</p></noscript>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

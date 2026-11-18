@@ -1,0 +1,356 @@
+{
+ "generated_at": "2026-11-17T20:23:09",
+ "git_commit": "b06b922",
+ "results_uncommitted_changes": true,
+ "event": {
+  "state": "Assam",
+  "districts": [
+   "Morigaon",
+   "Nagaon"
+  ],
+  "flood_window": [
+   "2019-07-01",
+   "2019-08-10"
+  ],
+  "normal_years": [
+   2018,
+   2021
+  ],
+  "normal_dates": [
+   "2018-07-10",
+   "2018-07-22",
+   "2018-08-03",
+   "2021-07-06",
+   "2021-07-18",
+   "2021-07-30"
+  ],
+  "satellite": "Sentinel-1 radar (sentinel-1-rtc)",
+  "district_boundary_source": "geoBoundaries",
+  "revisit_interval_days": 18,
+  "flooded_km2_by_district": {
+   "Morigaon": 440.7,
+   "Nagaon": 346.3
+  }
+ },
+ "ranking_file_header": [
+  "Clearwell risk ranking of VILLAGE PROXIES (generated 2026-11-15T13:09:31)",
+  "components used: exposure=flooded_frac, duration=max_duration_days, exposed_people=exposed_pop, well_reliance=pct_shallow_well_handpump, low_elevation=elev_pctile",
+  "weights (fixed in config.py, renormalized): exposure=0.350, duration=0.250, exposed_people=0.150, well_reliance=0.150, low_elevation=0.100",
+  "components dropped: none"
+ ],
+ "column_mapping": {
+  "id": "unit_id",
+  "name": "name",
+  "district": "district",
+  "rank": "rank",
+  "score": "score",
+  "pct_flooded": "flooded_frac (x100)",
+  "people_est": "exposed_pop (rounded to 10)",
+  "duration_days": "max_duration_days",
+  "c_exposure": "c_exposure (x100)",
+  "c_duration": "c_duration (x100)",
+  "c_exposed_people": "c_exposed_people (x100)",
+  "c_well_reliance": "c_well_reliance (x100)",
+  "c_low_elevation": "c_low_elevation (x100)"
+ },
+ "csv_columns": {
+  "rank": "rank",
+  "village": "name",
+  "district": "district",
+  "risk_score": "score",
+  "percent_area_flooded": "pct_flooded",
+  "people_in_flooded_area_estimate": "people_est",
+  "flood_duration_days_estimate": "duration_days",
+  "centroid_lat": "centroid_lat",
+  "centroid_lon": "centroid_lon"
+ },
+ "village_counts": {
+  "total": 110,
+  "by_district": {
+   "Morigaon": 16,
+   "Nagaon": 94
+  },
+  "unnamed": 60
+ },
+ "duration_values_days": [
+  0,
+  18,
+  36
+ ],
+ "study_bounds": [
+  [
+   25.96092,
+   91.95482
+  ],
+  [
+   26.69854,
+   93.32107
+  ]
+ ],
+ "flood_layers": [
+  {
+   "file": "flood_max.png",
+   "bounds": [
+    [
+     25.953182,
+     91.945727
+    ],
+    [
+     26.703447,
+     93.326475
+    ]
+   ],
+   "width": 1722,
+   "height": 1044,
+   "pixel_ground_m": 80.0,
+   "flooded_pixels": 223107,
+   "bytes": 46447,
+   "id": "max",
+   "label": "Maximum extent (all passes)"
+  },
+  {
+   "file": "flood_2019-07-23.png",
+   "bounds": [
+    [
+     25.953182,
+     91.945727
+    ],
+    [
+     26.703447,
+     93.326475
+    ]
+   ],
+   "width": 1722,
+   "height": 1044,
+   "pixel_ground_m": 80.0,
+   "flooded_pixels": 213714,
+   "bytes": 45570,
+   "id": "2019-07-23",
+   "label": "Pass 2019-07-23",
+   "date": "2019-07-23",
+   "track": "descending, relative orbit 77"
+  },
+  {
+   "file": "flood_2019-08-10.png",
+   "bounds": [
+    [
+     25.953182,
+     91.945727
+    ],
+    [
+     26.703447,
+     93.326475
+    ]
+   ],
+   "width": 1722,
+   "height": 1044,
+   "pixel_ground_m": 80.0,
+   "flooded_pixels": 86727,
+   "bytes": 27754,
+   "id": "2019-08-10",
+   "label": "Pass 2019-08-10",
+   "date": "2019-08-10",
+   "track": "descending, relative orbit 77"
+  }
+ ],
+ "passes": [
+  {
+   "date": "2019-07-23",
+   "track": "descending, relative orbit 77"
+  },
+  {
+   "date": "2019-08-10",
+   "track": "descending, relative orbit 77"
+  }
+ ],
+ "scoring": {
+  "weights": {
+   "exposure": 0.35,
+   "duration": 0.25,
+   "exposed_people": 0.15,
+   "well_reliance": 0.15,
+   "low_elevation": 0.1
+  },
+  "components_used": [
+   "exposure",
+   "duration",
+   "exposed_people",
+   "well_reliance",
+   "low_elevation"
+  ],
+  "component_columns": {
+   "exposure": "flooded_frac",
+   "duration": "max_duration_days",
+   "exposed_people": "exposed_pop",
+   "well_reliance": "pct_shallow_well_handpump",
+   "low_elevation": "elev_pctile"
+  },
+  "components_dropped": [],
+  "well_reliance_scoring": "absolute",
+  "unit_source": "OSM place=village/hamlet Voronoi cells clipped to district and 1500 m radius (110 points)",
+  "village_radius_m": 1500,
+  "n_units": 110,
+  "generated_at": "2026-11-15T13:09:33.602643"
+ },
+ "model1": {
+  "source": "results/model1_metrics.json",
+  "groups": {
+   "test_all": {
+    "label": "Test tiles, all countries",
+    "n_tiles": 90,
+    "unet": {
+     "iou": 0.6626225903483388,
+     "precision": 0.8385023080133017,
+     "recall": 0.7595597367367847
+    },
+    "otsu": {
+     "iou": 0.5458456321591642,
+     "precision": 0.6811499390506381,
+     "recall": 0.7331839237816439
+    }
+   },
+   "test_india": {
+    "label": "Test tiles, India only",
+    "n_tiles": 14,
+    "unet": {
+     "iou": 0.6632472649971484,
+     "precision": 0.8575843661747576,
+     "recall": 0.7453412711013871
+    },
+    "otsu": {
+     "iou": 0.7044084559734012,
+     "precision": 0.8804259060464565,
+     "recall": 0.7789272359932237
+    }
+   },
+   "bolivia": {
+    "label": "Bolivia holdout (country not seen in training)",
+    "n_tiles": 15,
+    "unet": {
+     "iou": 0.6610884969093924,
+     "precision": 0.8014023482423842,
+     "recall": 0.7906112576956904
+    },
+    "otsu": {
+     "iou": 0.6972798500203392,
+     "precision": 0.7809091251220638,
+     "recall": 0.8668623570800352
+    }
+   }
+  },
+  "generated_at": "2026-11-14T17:56:07.449256",
+  "iou_definition": "water IoU pooled over all valid pixels of all tiles in the group; mean_tile_iou is the average of per-tile IoUs"
+ },
+ "optical_check": {
+  "source": "results/sanity_check.json",
+  "sentinel2": {
+   "status": "DONE",
+   "flood_pass": "2019-08-10",
+   "s2_date": "2019-08-12",
+   "days_apart": 2,
+   "clear_fraction": 0.5592275899433534,
+   "metrics": {
+    "iou": 0.4018618571590148,
+    "precision": 0.5821201000161317,
+    "recall": 0.5647934615939566,
+    "agreement": 0.9428183171953434
+   }
+  },
+  "jrc_normal_water": {
+   "status": "DONE",
+   "occurrence_threshold": 50,
+   "metrics": {
+    "iou": 0.117332518170376,
+    "precision": 0.12059370968586512,
+    "recall": 0.8126909782094365,
+    "agreement": 0.8403122869832662
+   }
+  }
+ },
+ "validation": {
+  "source": "results/validation.json",
+  "status": "DONE",
+  "statement": "The ranking was compared with reported disease outbreaks (IDSP), but the comparison is too small to show whether the score works. Only 2 districts were mapped (Morigaon, Nagaon). The district-level correlation between the score and outbreaks could not be computed (fewer than 3 districts: correlation not computable). A small district-week check used 14 district-weeks, of which 3 had an outbreak in the following weeks. With this few cases the result is not evidence that the score predicts outbreaks. The ranking has not been checked against outbreaks or well tests at village level.",
+  "mapped_districts": [
+   "Morigaon",
+   "Nagaon"
+  ],
+  "outcome_window": [
+   "2019-07-01",
+   "2019-09-07"
+  ],
+  "district_correlation_computable": false,
+  "district_week": [
+   {
+    "method": "index_top_decile",
+    "n_rows": 14,
+    "n_positive": 3,
+    "auc": 0.5454545454545454
+   },
+   {
+    "method": "B1_flooded_km2",
+    "n_rows": 14,
+    "n_positive": 3,
+    "auc": 0.2727272727272727
+   },
+   {
+    "method": "B3_exposed_pop",
+    "n_rows": 14,
+    "n_positive": 3,
+    "auc": 0.2727272727272727
+   }
+  ],
+  "learned_model": "NOT RUN",
+  "report_limitations": [
+   "Only 2 district(s) were flood-mapped, so the district-level Spearman correlations have n = 2. With n this small the statistical power is very low and the results are indicative only; a permutation p-value cannot be small with so few districts.",
+   "IDSP lists reported outbreaks only. Weeks without a report were set to zero, which assumes complete reporting inside the file's date coverage (2018-03-10 to 2020-10-28).",
+   "Outbreaks depend on many things besides flooding (sanitation, reporting effort, population), and the outcome window is fixed in config.py.",
+   "Weather in the file is a single-point value per report row, so rainfall exists only for districts and weeks that had an outbreak (the B2 baseline is biased towards outbreaks).",
+   "1 district spelling(s) in the file could not be matched (see results/idsp_district_mapping.csv).",
+   "The index weights were fixed in config.py before looking at outbreak data."
+  ],
+  "generated_at": "2026-11-17T20:21:40.199248",
+  "stale_vs_ranking": null
+ },
+ "case_check": {
+  "source": "results/risk_checks.md",
+  "generated_at": "2026-11-15 13:10",
+  "statement": "Case check: Goriabori, the one reported outbreak village we could locate, ranked about 25 of 111. That is one approximate point, with the outbreak recorded 20 days after the last radar pass, so it is a case check, not a statistical test. Sibir has no coordinates yet.",
+  "points": [
+   {
+    "name": "Goriabori",
+    "district": "Morigaon",
+    "cases": 16,
+    "onset": "2019-08-30",
+    "located": true,
+    "rank": 25,
+    "n_units": 111,
+    "score": 72.9,
+    "approximate": true
+   },
+   {
+    "name": "Sibir",
+    "district": "Morigaon",
+    "cases": 31,
+    "onset": "2019-07-25",
+    "located": false
+   }
+  ]
+ },
+ "pipeline_warnings": [
+  "check_env: no CUDA GPU on this machine (CPU only)",
+  "validate: only 2 mapped district(s): district-level correlation not computable"
+ ],
+ "limitations": [
+  "Few satellite passes: the flood was seen on only 2 radar passes (2019-07-23, 2019-08-10). Water that came and went between passes is missed.",
+  "Only 110 villages are included (Morigaon 16, Nagaon 94): the ones mapped as village or hamlet points in OpenStreetMap. Villages missing from OpenStreetMap are not on this map.",
+  "60 of these villages have no name in OpenStreetMap and are shown by their OpenStreetMap id.",
+  "One flood event only (2019-07-01 to 2019-08-10). The ranking says nothing about other years or other districts.",
+  "Flood duration is a rough estimate. It counts the days between flooded passes plus one revisit interval (18 days), so it can only take a few values (here: 0, 18, 36 days).",
+  "No outbreak validation: the score has not been shown to predict disease outbreaks or contaminated wells.",
+  "Village shapes are not official boundaries. A real village can be split or merged.",
+  "Flooding is measured against water seen in the same weeks of earlier years (normal water). Areas that flood every monsoon may be undercounted.",
+  "People in the flooded area is modelled from WorldPop population estimates, not counted."
+ ],
+ "export_warnings": []
+}
