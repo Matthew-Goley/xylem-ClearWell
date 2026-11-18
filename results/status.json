@@ -13,7 +13,7 @@
       "reason": "",
       "warnings": [],
       "runtime_s": 0.1,
-      "finished_at": "2026-11-15T12:49:32",
+      "finished_at": "2026-11-17T20:21:43",
       "smoke": false
     },
     "train": {
@@ -88,8 +88,8 @@
       "warnings": [
         "only 2 mapped district(s): district-level correlation not computable"
       ],
-      "runtime_s": 0.7,
-      "finished_at": "2026-11-15T12:49:32",
+      "runtime_s": 4.5,
+      "finished_at": "2026-11-17T20:21:40",
       "smoke": false
     }
   },

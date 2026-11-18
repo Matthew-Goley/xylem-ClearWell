@@ -1,5 +1,7 @@
 # Large or machine-specific files: never commit these.
 data/
+# ...except the web map's generated data, which the deployed site serves.
+!frontend/data/
 outputs/
 *.pt
 *.pth

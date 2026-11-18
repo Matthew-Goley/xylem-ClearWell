@@ -44,7 +44,8 @@ CASE_FILE = "case_points.csv"
 TOP_K = 20
 # Written after reading the numbers of the run; recheck against the tables if inputs change.
 SUMMARY = [
-    "1. Well reliance now adds about 1 point to Morigaon units instead of 15, so Morigaon holds 5 of the top 10 "
+    "1. Well reliance now adds about 1 point to Morigaon units instead of about 13 (v1 gave the 16 tied Morigaon "
+    "units 94/109 = 0.862 and Nagaon 0), so Morigaon holds 5 of the top 10 "
     "instead of 10; Kakati Gaon and Basundhari (Nagaon) are now ranks 1-2 and Bhaktagaon is 3.",
     "2. Most of the ordering did not change: Spearman 0.990 with the v1 ranking and 18 of the top 20 are the same "
     "units; flooded fraction still drives it.",

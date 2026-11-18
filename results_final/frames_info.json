@@ -1,0 +1,25 @@
+{
+  "flood_day": "2019-07-23",
+  "normal_day": "2018-07-22",
+  "crs": "EPSG:32646",
+  "pixel_size_m": 10,
+  "grid_width_px": 13734,
+  "grid_height_px": 8267,
+  "zoom_window_px": {
+    "row": 3710,
+    "col": 1790,
+    "height": 1080,
+    "width": 1920
+  },
+  "zoom_bbox_lonlat": [
+    92.12817762355336,
+    26.269341707390215,
+    92.32118028743346,
+    26.365810807743067
+  ],
+  "zoom_size_km": [
+    19.2,
+    10.8
+  ],
+  "overlay": "Google Open Buildings v3 centroids (confidence >= 0.7): 26185 in view, 2744 on flooded pixels (yellow), rest dark grey"
+}

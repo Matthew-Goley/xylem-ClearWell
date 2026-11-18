@@ -274,8 +274,8 @@
       "method": "index_top_decile",
       "n_rows": 14,
       "n_positive": 3,
-      "auc": 0.7272727272727273,
-      "spearman": 0.33994470682450245
+      "auc": 0.5454545454545454,
+      "spearman": 0.06798894136490048
     },
     {
       "design": "district-week",
@@ -307,5 +307,5 @@
     "1 district spelling(s) in the file could not be matched (see results/idsp_district_mapping.csv).",
     "The index weights were fixed in config.py before looking at outbreak data."
   ],
-  "generated_at": "2026-11-15T12:49:32.392454"
+  "generated_at": "2026-11-17T20:21:40.199248"
 }
