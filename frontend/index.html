@@ -8,34 +8,36 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
   <a class="skip-link" href="#panel">Skip to the ranked list</a>
 
   <header class="site-header">
-    <h1>Clearwell</h1>
+    <h1 class="logo"><img src="assets/logo.png" alt="Clearwell" width="151" height="56"></h1>
     <p class="print-only print-meta" id="print-meta"></p>
+    <div class="map-controls" role="group" aria-label="Map layers">
+      <div class="ctl" role="group" aria-labelledby="show-label">
+        <span class="ctl-label" id="show-label">Show on map</span>
+        <div class="toggles">
+          <label><input type="checkbox" id="toggle-villages" checked> Villages</label>
+          <label><input type="checkbox" id="toggle-flood" checked> Flood water</label>
+          <label><input type="checkbox" id="toggle-districts" checked> District outlines</label>
+        </div>
+      </div>
+      <div class="ctl">
+        <label class="ctl-label" for="flood-select">Flood layer</label>
+        <select id="flood-select" aria-label="Which flood layer to show"></select>
+      </div>
+      <div class="ctl">
+        <label class="ctl-label" for="flood-opacity">Flood opacity <output id="flood-opacity-val" for="flood-opacity">70%</output></label>
+        <input type="range" id="flood-opacity" min="0" max="100" step="5" value="70" aria-label="Flood layer opacity, percent">
+      </div>
+    </div>
   </header>
 
   <main class="layout">
     <section class="map-col" aria-label="Map">
-      <div class="map-controls" role="group" aria-label="Map layers">
-        <fieldset class="toggles">
-          <legend class="visually-hidden">Show or hide map layers</legend>
-          <label><input type="checkbox" id="toggle-villages" checked> Villages</label>
-          <label><input type="checkbox" id="toggle-flood" checked> Flood water</label>
-          <label><input type="checkbox" id="toggle-districts" checked> District outlines</label>
-        </fieldset>
-        <div class="flood-ctl">
-          <label for="flood-select">Flood layer</label>
-          <select id="flood-select" aria-label="Which flood layer to show"></select>
-        </div>
-        <div class="flood-ctl">
-          <label for="flood-opacity">Flood opacity <output id="flood-opacity-val" for="flood-opacity">70%</output></label>
-          <input type="range" id="flood-opacity" min="0" max="100" step="5" value="70" aria-label="Flood layer opacity, percent">
-        </div>
-      </div>
       <div id="map" role="region" aria-label="Map of villages, flood water and district outlines. Use the ranked list for keyboard access to each village."></div>
     </section>
 
@@ -164,6 +166,6 @@
   <noscript><p class="noscript">This map needs JavaScript. The ranked list is also available as <a href="data/villages.csv">a CSV file</a>.</p></noscript>
 
   <script src="vendor/leaflet/leaflet.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>
