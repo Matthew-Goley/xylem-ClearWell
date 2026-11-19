@@ -49,14 +49,7 @@ a { color: var(--accent); }
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px;
   padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
-.title-block { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 h1 { margin: 0; font-size: 1.5rem; letter-spacing: 0.01em; }
-.tagline { margin: 0; color: var(--muted); }
-.banner {
-  margin: 0; flex: 1 1 360px;
-  background: var(--banner-bg); border: 1px solid var(--banner-border); border-left-width: 5px;
-  padding: 6px 12px; border-radius: 4px; font-size: 0.95rem;
-}
 
 /* Layout */
 .layout {
@@ -181,13 +174,12 @@ summary { cursor: pointer; color: var(--accent); }
   input[type="range"] { width: 130px; }
 }
 
-/* Print: banner, generation date and the top 20 only */
+/* Print: generation date and the top 20 only */
 @media print {
   @page { margin: 14mm; }
   body { display: block; background: #fff; font-size: 11pt; }
   .layout, .skip-link, noscript { display: none !important; }
   .site-header { border: 0; padding: 0 0 8px; display: block; }
-  .banner { margin: 6px 0; }
   .print-only { display: block; }
   .print-meta { margin: 4px 0 0; color: #333; font-size: 10pt; }
   #print-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
@@ -198,9 +190,17 @@ summary { cursor: pointer; color: var(--accent); }
 
 /* Keep wide tables inside their scroll box instead of widening the page. */
 .panel, .pane, .map-col, .table-wrap { min-width: 0; max-width: 100%; }
-td.num, th.num { white-space: nowrap; }
+td.num { white-space: nowrap; }
+th, td { padding-left: 4px; padding-right: 4px; }
 @media (max-width: 860px) {
   html, body { max-width: 100%; }
   .legend { font-size: 0.72rem; padding: 6px 8px; }
   .legend .sw { width: 14px; height: 10px; }
 }
+
+/* Hazard icon for high-score villages (shape plus hidden text, never colour alone). */
+.hazard { display: inline-flex; vertical-align: -3px; margin-right: 5px; }
+.hazard svg { display: block; }
+.pop h3 .hazard { vertical-align: -2px; }
+.pop .high-note { margin: -2px 0 6px; font-weight: 600; color: #8a2d02; }
+.legend .row .hazard { margin-right: 0; width: 18px; justify-content: center; }

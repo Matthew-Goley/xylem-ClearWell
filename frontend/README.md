@@ -21,14 +21,24 @@ frontend/
 
 ## Preview locally
 
-From the repository root:
+From the repository root (the folder that contains `frontend/`):
 
 ```bash
 python -m http.server -d frontend 8000
 ```
 
-Then open <http://localhost:8000>. Opening `index.html` directly from disk will not work,
-because browsers block `fetch()` of local files.
+Or, if you are already inside `frontend/`, drop the `-d` flag:
+
+```bash
+python -m http.server 8000
+```
+
+Then open <http://localhost:8000>. If every page is a 404, the server was started from
+the wrong folder: `-d frontend` run from inside `frontend/` points at `frontend/frontend`,
+which does not exist. Stop it (Ctrl+C) and use the matching command above.
+
+Opening `index.html` directly from disk will not work, because browsers block `fetch()`
+of local files.
 
 ## Refresh the data
 

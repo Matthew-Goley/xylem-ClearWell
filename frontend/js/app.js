@@ -93,6 +93,17 @@
     for (var i = 0; i < BINS.length; i++) if (score >= BINS[i].min) return BINS[i].color;
     return BINS[BINS.length - 1].color;
   }
+  // Villages in the top legend bin get a hazard icon in the list, popup and print view.
+  var HIGH_SCORE = BINS[0].min;
+  function isHigh(p) { return isNum(p.score) && p.score >= HIGH_SCORE; }
+  function hazardIcon() {
+    return '<span class="hazard" title="Score ' + HIGH_SCORE + ' or higher">' +
+      '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M8 1.3 15.2 14.4H.8Z" fill="#a63603" stroke="#5a1d01" stroke-width="1" stroke-linejoin="round"/>' +
+      '<rect x="7.1" y="5.3" width="1.8" height="5.1" rx=".6" fill="#fff"/><circle cx="8" cy="12.2" r="1" fill="#fff"/>' +
+      '</svg><span class="visually-hidden">High score, </span></span>';
+  }
+
   function fetchJSON(url) {
     return fetch(url, { cache: "no-cache" }).then(function (r) {
       if (!r.ok) throw new Error(url + " " + r.status);
@@ -116,8 +127,6 @@
   }
 
   function fillBanner(meta) {
-    var phrase = meta ? eventPhrase(meta) : "";
-    setText("banner-event", phrase || "Event details not available.");
     var gen = meta && meta.generated_at ? "Data generated " + niceDateTime(meta.generated_at) + "." : "Data generation date not available.";
     setText("print-meta", gen + " Printed " + (function (n) { return n.getDate() + " " + MONTHS[n.getMonth()] + " " + n.getFullYear(); })(new Date()) + ".");
   }
@@ -302,7 +311,8 @@
       });
       html += '<h4 style="margin-top:6px">Other layers</h4>' +
         '<div class="row"><span class="sw" style="background:' + FLOOD_COLOR + ';opacity:.75"></span>Flood water</div>' +
-        '<div class="row"><span class="sw" style="background:transparent;border:2px dashed #333"></span>District outline</div>';
+        '<div class="row"><span class="sw" style="background:transparent;border:2px dashed #333"></span>District outline</div>' +
+        '<div class="row">' + hazardIcon() + "Score " + HIGH_SCORE + " or higher</div>";
       div.innerHTML = html;
       L.DomEvent.disableClickPropagation(div);
       return div;
@@ -335,7 +345,8 @@
         (ok ? Math.max(0, Math.min(100, v)) : 0) + '%"></span></span><span class="v">' + (ok ? v : "n/a") + "</span></li>";
     }).join("");
     return '<div class="pop">' +
-      "<h3>" + esc(p.name) + "</h3>" +
+      "<h3>" + (isHigh(p) ? hazardIcon() : "") + esc(p.name) + "</h3>" +
+      (isHigh(p) ? '<p class="high-note">High score: ' + HIGH_SCORE + " or higher</p>" : "") +
       '<p class="sub">' + esc(p.district || NA) + " district</p>" +
       "<dl>" +
       "<dt>Risk score</dt><dd>" + (isNum(p.score) ? fmt(p.score, 1) + " of 100" : NA) + "</dd>" +
@@ -495,14 +506,16 @@
     tbody.innerHTML = rows.map(function (p) {
       return '<tr tabindex="0" data-id="' + esc(p.id) + '" aria-selected="false">' +
         '<td class="num">' + fmt(p.rank) + "</td>" +
-        "<td>" + esc(p.name) + "</td>" +
+        "<td>" + (isHigh(p) ? hazardIcon() : "") + esc(p.name) + "</td>" +
         "<td>" + esc(p.district || NA) + "</td>" +
         '<td class="num"><span class="swatch" style="background:' + colorFor(p.score) + '" aria-hidden="true"></span>' + fmt(p.score, 1) + "</td>" +
         '<td class="num">' + (isNum(p.pct_flooded) ? fmt(p.pct_flooded, 1) : NA) + "</td>" +
         '<td class="num">' + (isNum(p.people_est) ? fmt(p.people_est) : NA) + "</td></tr>";
     }).join("");
     var n = state.villages.length;
-    setText("list-status", "Showing " + rows.length + " of " + n + " villages" +
+    var nHigh = state.villages.filter(isHigh).length;
+    setText("list-status", (nHigh ? nHigh + " of " + n + " villages score " + HIGH_SCORE + " or higher (marked with a warning sign). " : "") +
+      "Showing " + rows.length + " of " + n + " villages" +
       (state.top20 ? ", top 20 only" : "") + (state.search ? ', matching "' + state.search + '"' : "") +
       ". Select a row to show it on the map.");
     markSelectedRow();
@@ -560,7 +573,7 @@
   function renderPrintTable() {
     var tbody = document.querySelector("#print-table tbody");
     tbody.innerHTML = state.villages.filter(function (p) { return p.rank <= 20; }).map(function (p) {
-      return "<tr><td>" + fmt(p.rank) + "</td><td>" + esc(p.name) + "</td><td>" + esc(p.district || NA) + "</td><td>" +
+      return "<tr><td>" + fmt(p.rank) + "</td><td>" + (isHigh(p) ? hazardIcon() : "") + esc(p.name) + "</td><td>" + esc(p.district || NA) + "</td><td>" +
         fmt(p.score, 1) + "</td><td>" + (isNum(p.pct_flooded) ? fmt(p.pct_flooded, 1) : NA) + "</td><td>" +
         (isNum(p.people_est) ? fmt(p.people_est) : NA) + "</td><td>" + (isNum(p.duration_days) ? fmt(p.duration_days) : NA) + "</td></tr>";
     }).join("");
