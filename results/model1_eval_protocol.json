@@ -1,0 +1,312 @@
+{
+  "description": "Model 1 re-scored under two pixel masks; no retraining, no tuning.",
+  "checkpoint_path": "outputs/unet.pt",
+  "checkpoint_sha256": "b42facd16f14b86eba9c39a4b128a386f9d2510ec4447ef4b4b876eace2e1a46",
+  "checkpoint_epoch": 44,
+  "checkpoint_val_iou": 0.6773542818873142,
+  "norm_stats": "results/norm_stats.json (identical to the copy stored in the checkpoint)",
+  "threshold": 0.5,
+  "amp": true,
+  "device": "NVIDIA GeForce RTX 3080",
+  "git": {
+    "commit": "0cc76dc0ce0cb9b2d91e4b099e5039be4299bf2f",
+    "working_tree_clean_except_untracked": true
+  },
+  "date": "2026-11-20T19:49:47",
+  "masks": {
+    "A": "hand label >= 0 AND Otsu label in {0,1} (current protocol, train.py run_test)",
+    "B": "hand label >= 0 only (standard). Otsu: pixels with undefined Otsu label are counted as predicted not-water."
+  },
+  "definitions": {
+    "pooled_water_iou": "TP/(TP+FP+FN) with TP, FP, FN summed over all valid pixels of all tiles",
+    "pooled_mean_iou_2class": "mean of pooled water IoU and pooled non-water IoU TN/(TN+FP+FN)",
+    "mean_tile_iou_all_tiles": "mean of per-tile water IoU over every tile where it is defined; tiles with no water in label and none predicted have 0/0 IoU and are excluded, counted in n_tiles_iou_undefined",
+    "mean_tile_iou_tiles_with_water": "mean of per-tile water IoU over tiles with >= 1 water pixel inside the mask",
+    "n_tiles_zero_water_in_label": "tiles with no water pixel inside the mask"
+  },
+  "sanity_check_step1": {
+    "test_all": {
+      "expected": 0.6626,
+      "reproduced": 0.6626225903483388,
+      "abs_diff": 2.2590348338846766e-05,
+      "ok": true
+    },
+    "test_india": {
+      "expected": 0.6632,
+      "reproduced": 0.6632472649971484,
+      "abs_diff": 4.726499714835519e-05,
+      "ok": true
+    },
+    "bolivia": {
+      "expected": 0.6611,
+      "reproduced": 0.6610884969093924,
+      "abs_diff": 1.1503090607600797e-05,
+      "ok": true
+    }
+  },
+  "test_split_scorings": {
+    "full_runs_in_outputs_logs_test_log": 2,
+    "this_run": 1,
+    "total": 3
+  },
+  "groups": {
+    "test_all": {
+      "A": {
+        "n_tiles": 90,
+        "n_valid_pixels": 20517367,
+        "n_tiles_zero_water_in_label": 7,
+        "n_valid_pixels_with_otsu_undefined": 0,
+        "unet": {
+          "pooled_water_iou": 0.6626225903483388,
+          "precision": 0.8385023080133017,
+          "recall": 0.7595597367367847,
+          "pooled_nonwater_iou": 0.9465541197721272,
+          "pooled_mean_iou_2class": 0.8045883550602331,
+          "mean_tile_iou_all_tiles": 0.40795087783760564,
+          "n_tiles_iou_defined": 87,
+          "n_tiles_iou_undefined": 3,
+          "mean_tile_iou_tiles_with_water": 0.42761116110688796,
+          "n_tiles_with_water": 83,
+          "counts": {
+            "tp": 1949107,
+            "fp": 375403,
+            "fn": 616994,
+            "tn": 17575863
+          }
+        },
+        "otsu": {
+          "pooled_water_iou": 0.5458456321591642,
+          "precision": 0.6811499390506381,
+          "recall": 0.7331839237816439,
+          "pooled_nonwater_iou": 0.9160019967865324,
+          "pooled_mean_iou_2class": 0.7309238144728483,
+          "mean_tile_iou_all_tiles": 0.3273998558394092,
+          "n_tiles_iou_defined": 86,
+          "n_tiles_iou_undefined": 4,
+          "mean_tile_iou_tiles_with_water": 0.33923358556854444,
+          "n_tiles_with_water": 83,
+          "counts": {
+            "tp": 1881424,
+            "fp": 880705,
+            "fn": 684677,
+            "tn": 17070561
+          }
+        }
+      },
+      "B": {
+        "n_tiles": 90,
+        "n_valid_pixels": 20517367,
+        "n_tiles_zero_water_in_label": 7,
+        "n_valid_pixels_with_otsu_undefined": 0,
+        "unet": {
+          "pooled_water_iou": 0.6626225903483388,
+          "precision": 0.8385023080133017,
+          "recall": 0.7595597367367847,
+          "pooled_nonwater_iou": 0.9465541197721272,
+          "pooled_mean_iou_2class": 0.8045883550602331,
+          "mean_tile_iou_all_tiles": 0.40795087783760564,
+          "n_tiles_iou_defined": 87,
+          "n_tiles_iou_undefined": 3,
+          "mean_tile_iou_tiles_with_water": 0.42761116110688796,
+          "n_tiles_with_water": 83,
+          "counts": {
+            "tp": 1949107,
+            "fp": 375403,
+            "fn": 616994,
+            "tn": 17575863
+          }
+        },
+        "otsu": {
+          "pooled_water_iou": 0.5458456321591642,
+          "precision": 0.6811499390506381,
+          "recall": 0.7331839237816439,
+          "pooled_nonwater_iou": 0.9160019967865324,
+          "pooled_mean_iou_2class": 0.7309238144728483,
+          "mean_tile_iou_all_tiles": 0.3273998558394092,
+          "n_tiles_iou_defined": 86,
+          "n_tiles_iou_undefined": 4,
+          "mean_tile_iou_tiles_with_water": 0.33923358556854444,
+          "n_tiles_with_water": 83,
+          "counts": {
+            "tp": 1881424,
+            "fp": 880705,
+            "fn": 684677,
+            "tn": 17070561
+          }
+        }
+      }
+    },
+    "test_india": {
+      "A": {
+        "n_tiles": 14,
+        "n_valid_pixels": 3224168,
+        "n_tiles_zero_water_in_label": 1,
+        "n_valid_pixels_with_otsu_undefined": 0,
+        "unet": {
+          "pooled_water_iou": 0.6632472649971484,
+          "precision": 0.8575843661747576,
+          "recall": 0.7453412711013871,
+          "pooled_nonwater_iou": 0.904221441142922,
+          "pooled_mean_iou_2class": 0.7837343530700351,
+          "mean_tile_iou_all_tiles": 0.4226892166119219,
+          "n_tiles_iou_defined": 14,
+          "n_tiles_iou_undefined": 0,
+          "mean_tile_iou_tiles_with_water": 0.45520377173591586,
+          "n_tiles_with_water": 13,
+          "counts": {
+            "tp": 511682,
+            "fp": 84973,
+            "fn": 174825,
+            "tn": 2452688
+          }
+        },
+        "otsu": {
+          "pooled_water_iou": 0.7044084559734012,
+          "precision": 0.8804259060464565,
+          "recall": 0.7789272359932237,
+          "pooled_nonwater_iou": 0.9165648172902129,
+          "pooled_mean_iou_2class": 0.8104866366318071,
+          "mean_tile_iou_all_tiles": 0.40587023617669443,
+          "n_tiles_iou_defined": 13,
+          "n_tiles_iou_undefined": 1,
+          "mean_tile_iou_tiles_with_water": 0.40587023617669443,
+          "n_tiles_with_water": 13,
+          "counts": {
+            "tp": 534739,
+            "fp": 72625,
+            "fn": 151768,
+            "tn": 2465036
+          }
+        }
+      },
+      "B": {
+        "n_tiles": 14,
+        "n_valid_pixels": 3224168,
+        "n_tiles_zero_water_in_label": 1,
+        "n_valid_pixels_with_otsu_undefined": 0,
+        "unet": {
+          "pooled_water_iou": 0.6632472649971484,
+          "precision": 0.8575843661747576,
+          "recall": 0.7453412711013871,
+          "pooled_nonwater_iou": 0.904221441142922,
+          "pooled_mean_iou_2class": 0.7837343530700351,
+          "mean_tile_iou_all_tiles": 0.4226892166119219,
+          "n_tiles_iou_defined": 14,
+          "n_tiles_iou_undefined": 0,
+          "mean_tile_iou_tiles_with_water": 0.45520377173591586,
+          "n_tiles_with_water": 13,
+          "counts": {
+            "tp": 511682,
+            "fp": 84973,
+            "fn": 174825,
+            "tn": 2452688
+          }
+        },
+        "otsu": {
+          "pooled_water_iou": 0.7044084559734012,
+          "precision": 0.8804259060464565,
+          "recall": 0.7789272359932237,
+          "pooled_nonwater_iou": 0.9165648172902129,
+          "pooled_mean_iou_2class": 0.8104866366318071,
+          "mean_tile_iou_all_tiles": 0.40587023617669443,
+          "n_tiles_iou_defined": 13,
+          "n_tiles_iou_undefined": 1,
+          "mean_tile_iou_tiles_with_water": 0.40587023617669443,
+          "n_tiles_with_water": 13,
+          "counts": {
+            "tp": 534739,
+            "fp": 72625,
+            "fn": 151768,
+            "tn": 2465036
+          }
+        }
+      }
+    },
+    "bolivia": {
+      "A": {
+        "n_tiles": 15,
+        "n_valid_pixels": 2867751,
+        "n_tiles_zero_water_in_label": 0,
+        "n_valid_pixels_with_otsu_undefined": 0,
+        "unet": {
+          "pooled_water_iou": 0.6610884969093924,
+          "precision": 0.8014023482423842,
+          "recall": 0.7906112576956904,
+          "pooled_nonwater_iou": 0.9265061014336685,
+          "pooled_mean_iou_2class": 0.7937972991715305,
+          "mean_tile_iou_all_tiles": 0.4401590022067551,
+          "n_tiles_iou_defined": 15,
+          "n_tiles_iou_undefined": 0,
+          "mean_tile_iou_tiles_with_water": 0.4401590022067551,
+          "n_tiles_with_water": 15,
+          "counts": {
+            "tp": 359570,
+            "fp": 89106,
+            "fn": 95230,
+            "tn": 2323845
+          }
+        },
+        "otsu": {
+          "pooled_water_iou": 0.6972798500203392,
+          "precision": 0.7809091251220638,
+          "recall": 0.8668623570800352,
+          "pooled_nonwater_iou": 0.9308021582355704,
+          "pooled_mean_iou_2class": 0.8140410041279549,
+          "mean_tile_iou_all_tiles": 0.4531735618327523,
+          "n_tiles_iou_defined": 15,
+          "n_tiles_iou_undefined": 0,
+          "mean_tile_iou_tiles_with_water": 0.4531735618327523,
+          "n_tiles_with_water": 15,
+          "counts": {
+            "tp": 394249,
+            "fp": 110610,
+            "fn": 60551,
+            "tn": 2302341
+          }
+        }
+      },
+      "B": {
+        "n_tiles": 15,
+        "n_valid_pixels": 2867815,
+        "n_tiles_zero_water_in_label": 0,
+        "n_valid_pixels_with_otsu_undefined": 64,
+        "unet": {
+          "pooled_water_iou": 0.6611283710498741,
+          "precision": 0.8014306725498062,
+          "recall": 0.7906407189841359,
+          "pooled_nonwater_iou": 0.9265061014336685,
+          "pooled_mean_iou_2class": 0.7938172362417713,
+          "mean_tile_iou_all_tiles": 0.4401779542297797,
+          "n_tiles_iou_defined": 15,
+          "n_tiles_iou_undefined": 0,
+          "mean_tile_iou_tiles_with_water": 0.4401779542297797,
+          "n_tiles_with_water": 15,
+          "counts": {
+            "tp": 359634,
+            "fp": 89106,
+            "fn": 95230,
+            "tn": 2323845
+          }
+        },
+        "otsu": {
+          "pooled_water_iou": 0.6972009323151904,
+          "precision": 0.7809091251220638,
+          "recall": 0.8667403883358542,
+          "pooled_nonwater_iou": 0.9307780750543951,
+          "pooled_mean_iou_2class": 0.8139895036847928,
+          "mean_tile_iou_all_tiles": 0.45307844765756866,
+          "n_tiles_iou_defined": 15,
+          "n_tiles_iou_undefined": 0,
+          "mean_tile_iou_tiles_with_water": 0.45307844765756866,
+          "n_tiles_with_water": 15,
+          "counts": {
+            "tp": 394249,
+            "fp": 110610,
+            "fn": 60615,
+            "tn": 2302341
+          }
+        }
+      }
+    }
+  }
+}
