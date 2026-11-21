@@ -68,7 +68,7 @@ The ranked list is a prototype output. It has not been checked against ground tr
 - **Data:** Sen1Floods11 hand-labeled tiles (Bonafilia et al., 2020), 446 tiles in total: 252 train, 89 validation, 90 test and 15 Bolivia holdout. Inputs are Sentinel-1 VV and VH backscatter in dB.
 - **Preprocessing:** dB values are clipped to a fixed range, then standardized with the VV and VH mean and standard deviation of the training tiles. The same numbers are reused unchanged for Assam ([results/norm_stats.json](results/norm_stats.json)).
 - **Model:** U-Net with a ResNet-34 encoder (ImageNet weights), 2 input bands.
-- **Training:** BCE plus Dice loss with no-data pixels ignored, random 256 px crops, flips and 90 degree rotations, AdamW with a cosine schedule, mixed precision, batch size 8, up to 60 epochs. Learning rate and encoder learning-rate multiplier: <<VERIFY from results/model1_train_summary.json and results/model1_sweep.md>>. The selected checkpoint is epoch 44, which had the best validation IoU (0.677). Early stopping did not trigger. One full training run took 96 seconds on an RTX 3080.
+- **Training:** BCE plus Dice loss with no-data pixels ignored, random 256 px crops, flips and 90 degree rotations, AdamW with a cosine schedule, mixed precision, batch size 8, up to 60 epochs. The decoder and head start at a learning rate of 3e-4 and the encoder at 0.1 times that (3e-5), the `lr0.0003_enc0.1x` setting that scored best on the validation split in [results/model1_sweep.md](results/model1_sweep.md). The `learning_rate` value in `results/model1_train_summary.json` is the rate at the last epoch after the cosine decay, not the starting rate. The selected checkpoint is epoch 44, which had the best validation IoU (0.677). Early stopping did not trigger. One full training run took 96 seconds on an RTX 3080.
 - **Evaluation:** a pixel is water if the predicted probability is at least 0.5. IoU is pooled: true positives, false positives and false negatives are summed over all valid pixels of a group, then one IoU is computed. Code: `train.py` and `eval_protocol.py`.
 - **Baseline:** the Otsu threshold labels that ship with Sen1Floods11 (`S1OtsuLabelHand`). They are read from the dataset, not computed by this repo.
 
@@ -96,8 +96,8 @@ Flood-window imagery contains more water, so a lower mean is expected even witho
 ### Model 2: the risk index
 
 - **Units:** Census 2011 village boundaries are not freely downloadable, so units are Voronoi cells around OpenStreetMap village and hamlet points, clipped to the district and to 1.5 km. They are called village proxies throughout.
-- **Components:** flooded share, flood duration, people in the flooded area (WorldPop), shallow-well reliance and low elevation. Each becomes a percentile rank from 0 to 1, then a weighted sum scaled to 0 to 100. Weights are in `config.py` and are assumptions, not learned. Source of the shallow-well reliance values in the final run: <<VERIFY>>.
-- **Validation design:** no model is trained on outbreaks. The index and three simple baselines (flooded area alone, rainfall alone, people in flooded area alone) are compared with IDSP outbreak counts using Spearman correlation, permutation p-values and bootstrap intervals, plus a district-week check. Weights were fixed in advance: <<VERIFY with git history that RISK weights in config.py did not change after the validate stage ran>>.
+- **Components:** flooded share, flood duration, people in the flooded area (WorldPop), shallow-well reliance and low elevation. Each becomes a percentile rank from 0 to 1, except shallow-well reliance, which is used as a share (percent divided by 100). The components are then combined as a weighted sum scaled to 0 to 100. Weights are in `config.py` and are assumptions, not learned. The shallow-well reliance values come from a hand-filled district-level table, `data/manual/census_water.csv`: 92.1% for Morigaon and 85.4% for Nagaon, so every village proxy in a district gets the same value. That file does not record where its numbers came from, and `data/` is not committed, so the source cannot be checked from this repo.
+- **Validation design:** no model is trained on outbreaks. The index and three simple baselines (flooded area alone, rainfall alone, people in flooded area alone) are compared with IDSP outbreak counts using Spearman correlation, permutation p-values and bootstrap intervals, plus a district-week check. The five weights in `config.py` have not changed since they were first committed on 2026-11-12, before the outbreak file was first used (validate stage, 2026-11-15 12:49). One related setting did change after that first use: later on 2026-11-15, shallow-well reliance was switched from a percentile rank to a share, with its weight unchanged at 0.15 (reason in `DECISIONS.md`).
 
 ### Limits
 
@@ -120,7 +120,7 @@ Flood-window imagery contains more water, so a lower mean is expected even witho
 
 ## Reproduce
 
-Windows (PowerShell), Python 3.12, an NVIDIA GPU. For other systems, troubleshooting and time and disk estimates see [docs/SETUP.md](docs/SETUP.md).
+Windows (PowerShell), Python 3.12, an NVIDIA GPU.
 
 ```powershell
 git clone https://github.com/Matthew-Goley/xylem-ClearWell.git
