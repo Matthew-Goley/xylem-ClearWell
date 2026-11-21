@@ -40,7 +40,7 @@ Fixed-rule examples (best, median and worst test tile by IoU, plus the India til
 
 ![Example tiles](results/figures/fig3_examples.png)
 
-### Applying it to Assam: Morigaon and Nagaon districts, July to August 2019 flood
+### Applying it to Morigaon and Nagaon districts, July to August 2019 flood
 
 - **787.0 km2** of flooded area mapped (Morigaon 440.7, Nagaon 346.3), excluding normal-year water, from 2 Sentinel-1 passes (2019-07-23 and 2019-08-10).
 - Flooded pixels sit closer to normal water and lower in elevation than random land pixels: mean distance to normal water 201 m vs 378 m, mean elevation 56.8 m vs 77.6 m (permutation p = 0.005 for both).
@@ -99,7 +99,7 @@ Flood-window imagery contains more water, so a lower mean is expected even witho
 - **Components:** flooded share, flood duration, people in the flooded area (WorldPop), shallow-well reliance and low elevation. Each becomes a percentile rank from 0 to 1, then a weighted sum scaled to 0 to 100. Weights are in `config.py` and are assumptions, not learned. Source of the shallow-well reliance values in the final run: <<VERIFY>>.
 - **Validation design:** no model is trained on outbreaks. The index and three simple baselines (flooded area alone, rainfall alone, people in flooded area alone) are compared with IDSP outbreak counts using Spearman correlation, permutation p-values and bootstrap intervals, plus a district-week check. Weights were fixed in advance: <<VERIFY with git history that RISK weights in config.py did not change after the validate stage ran>>.
 
-### Limits you should know about
+### Limits
 
 - Sentinel-1 revisits a place every 6 to 12 days, so flash floods between passes are invisible.
 - The U-Net finds water, not floods. Flooded paddy fields and seasonal wetlands are handled only by subtracting normal-year water.
@@ -136,7 +136,7 @@ python run_all.py
 
 Pick the PyTorch `--index-url` that matches your CUDA version at <https://pytorch.org/get-started/locally/>. Install torch before `requirements.txt`.
 
-The trained epoch-44 checkpoint is on the [Releases page](<<LINK after publishing the release>>). SHA256: `b42facd16f14b86eba9c39a4b128a386f9d2510ec4447ef4b4b876eace2e1a46`. It is a PyTorch file, so only load checkpoints from sources you trust.
+The trained epoch-44 checkpoint is on the [Releases page](https://github.com/Matthew-Goley/xylem-ClearWell/releases/tag/model1-v1). SHA256: `b42facd16f14b86eba9c39a4b128a386f9d2510ec4447ef4b4b876eace2e1a46`. It is a PyTorch file, so only load checkpoints from sources you trust.
 
 | File | What it does |
 |---|---|
