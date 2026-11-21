@@ -30,7 +30,7 @@ How far each part is validated:
 | India test subset | 14 | 0.663 | 0.704 |
 | Bolivia holdout (country never seen in training) | 15 | 0.661 | 0.697 |
 
-Read this honestly:
+Results Interpretations:
 
 - The U-Net beats the Otsu baseline only on the full test set. The India subset is only 14 tiles, so that comparison is uncertain.
 - The IoU number depends on the definition. The same predictions score 0.663 as pooled water IoU, 0.805 as the mean over both classes (water and not water), and 0.408 as the average of per-tile IoUs (low because tiles with little water score near 0). Only compare with other papers that use the same definition.
